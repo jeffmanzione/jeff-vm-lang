@@ -1,0 +1,16 @@
+
+
+@push	apush
+		ret
+		
+@pop	get		a
+		apop
+		ret
+		
+@enq	aenq
+		ret
+		
+@deq	get		a
+		adeq
+		ret
+				

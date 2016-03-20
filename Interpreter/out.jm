@@ -1,0 +1,625 @@
+@epsilon
+        push    0.000001
+        ret
+
+@int_pow
+        set     n
+        set     x
+        push    1
+        get     n
+        eq
+        ifn     else_149
+        get     x
+        jump    end_149
+@else_149
+        get     x
+        get     x
+        get     n
+        push    1
+        sub
+        call    int_pow
+        mult
+@end_149
+        ret
+
+@pow
+        set     n
+        set     x
+        push    1.000000
+        get     x
+        tof
+        get     n
+        set     power
+        set     value
+        set     result
+@while_105
+        get     power
+        call    epsilon
+        gt
+        ifn     end_105
+        get     power
+        push    2
+        mod
+        push    1
+        eq
+        ifn     else_99
+        get     result
+        get     value
+        mult
+        set     result
+        jump    end_99
+@else_99
+@end_99
+        get     value
+        get     value
+        mult
+        get     power
+        push    2
+        div
+        set     power
+        set     value
+        jump    while_105
+@end_105
+        get     result
+        toi
+        ret
+
+@sqr
+        set     x
+        get     x
+        get     x
+        mult
+        ret
+
+@sqrt
+        set     n
+        get     n
+        tof
+        push    1.000000
+        set     y
+        set     x
+@while_32
+        get     x
+        get     y
+        sub
+        call    epsilon
+        gt
+        ifn     end_32
+        get     x
+        get     y
+        add
+        push    2.000000
+        div
+        set     x
+        get     n
+        get     x
+        div
+        set     y
+        jump    while_32
+@end_32
+        get     x
+        ret
+
+@println
+        set     var
+        get     var
+        print
+        push    '\n'
+        call    print_str
+        ret
+
+@print_str
+        set     str
+        push    0
+        set     i
+@for_44
+        get     i
+        get     str
+        alen
+        lt
+        ifn     end_44
+        get     str
+        get     i
+        aget
+        print
+        get     i
+        push    1
+        add
+        set     i
+        jump    for_44
+@end_44
+        ret
+
+@print_strln
+        set     str
+        get     str
+        call    print_str
+        push    '\n'
+        call    print_str
+        ret
+
+@partition
+        set     hi
+        set     lo
+        set     a
+        get     a
+        get     hi
+        aget
+        get     lo
+        set     i
+        set     p
+        get     lo
+        set     j
+@for_127
+        get     j
+        get     hi
+        lt
+        ifn     end_127
+        get     a
+        get     j
+        aget
+        get     p
+        lte
+        ifn     else_112
+        get     a
+        get     i
+        aget
+        get     a
+        get     j
+        aget
+        swap
+        get     i
+        push    1
+        add
+        set     i
+        jump    end_112
+@else_112
+@end_112
+        get     j
+        push    1
+        add
+        set     j
+        jump    for_127
+@end_127
+        get     a
+        get     i
+        aget
+        get     a
+        get     hi
+        aget
+        swap
+        get     i
+        ret
+
+@quicksort
+        set     hi
+        set     lo
+        set     a
+        get     lo
+        get     hi
+        lt
+        ifn     else_59
+        get     a
+        get     lo
+        get     hi
+        call    partition
+        set     p
+        get     a
+        get     lo
+        get     p
+        push    1
+        sub
+        call    quicksort
+        get     a
+        get     p
+        push    1
+        add
+        get     hi
+        call    quicksort
+        jump    end_59
+@else_59
+@end_59
+        ret
+
+@qsort
+        set     a
+        get     a
+        push    0
+        get     a
+        alen
+        push    1
+        sub
+        call    quicksort
+        ret
+
+@flatten
+        set     arr
+        anew
+        set     result
+        push    0
+        set     i
+@for_57
+        get     i
+        get     arr
+        alen
+        lt
+        ifn     end_57
+        push    0
+        set     j
+@for_40
+        get     j
+        get     arr
+        get     i
+        aget
+        alen
+        lt
+        ifn     end_40
+        get     result
+        get     result
+        alen
+        get     arr
+        get     i
+        aget
+        get     j
+        aget
+        ains
+        get     j
+        push    1
+        add
+        set     j
+        jump    for_40
+@end_40
+        get     i
+        push    1
+        add
+        set     i
+        jump    for_57
+@end_57
+        get     result
+        ret
+
+@main
+        anew
+        anew
+        push    1
+        aadd
+        push    2
+        aadd
+        aadd
+        anew
+        push    3
+        aadd
+        push    4
+        aadd
+        aadd
+        anew
+        push    5
+        aadd
+        push    6
+        aadd
+        aadd
+        call    flatten
+        call    println
+        anew
+        push    1
+        aadd
+        push    5
+        aadd
+        push    3
+        aadd
+        set     arr
+        push    1
+        push    2
+        push    3
+        get     arr
+        push    1
+        aget
+        flip
+        rset
+        set     b
+        set     a
+        push    'a='
+        call    print_str
+        get     a
+        call    println
+        push    'b='
+        call    print_str
+        get     b
+        call    println
+        push    'arr[1]='
+        call    print_str
+        get     arr
+        push    1
+        aget
+        call    println
+        push    1
+        set     i
+        get     i
+        call    println
+        get     i
+        dup
+        dref
+        flip
+        dup
+        push    1
+        add
+        rset
+        call    println
+        get     i
+        dup
+        dup
+        push    1
+        add
+        rset
+        call    println
+        get     i
+        call    println
+        push    'floccinaucinihilipilification'
+        set     unsorted
+        get     unsorted
+        call    qsort
+        get     unsorted
+        call    print_strln
+        anew
+        push    9
+        aadd
+        push    8
+        aadd
+        push    7
+        aadd
+        push    6
+        aadd
+        push    5
+        aadd
+        push    4
+        aadd
+        push    3
+        aadd
+        push    2
+        aadd
+        push    1
+        aadd
+        set     unsorted
+        get     unsorted
+        push    2
+        push    10
+        ains
+        push    'Unsorted: '
+        call    print_str
+        get     unsorted
+        call    println
+        get     unsorted
+        call    qsort
+        push    'Sorted:   '
+        call    print_str
+        get     unsorted
+        call    println
+        push    1
+        exit
+
+@main_5
+        anew
+        push    'abc'
+        aadd
+        push    'def'
+        aadd
+        push    'ghi'
+        aadd
+        push    'jkl'
+        aadd
+        push    'mno'
+        aadd
+        push    'qrs'
+        aadd
+        push    'tuv'
+        aadd
+        push    'wxyz'
+        aadd
+        set     arr
+        get     arr
+        push    2
+        aget
+        call    print_strln
+        get     arr
+        call    println
+        ret
+
+@main_2
+        push    2.000000
+        call    sqrt
+        print
+        push    4
+        push    1
+        call    pow
+        toi
+        print
+        push    4
+        push    2
+        call    pow
+        tof
+        print
+        push    4
+        push    3
+        call    pow
+        toi
+        print
+        push    4
+        push    4
+        call    pow
+        toi
+        print
+        push    4
+        push    5.551000
+        call    pow
+        print
+        ret
+
+@main_1
+        push    1
+        set     x
+@for_303
+        get     x
+        call    sqr
+        push    50
+        lt
+        ifn     end_303
+        get     x
+        call    sqr
+        print
+        get     x
+        dup
+        dref
+        flip
+        dup
+        push    1
+        add
+        rset
+        jump    for_303
+@end_303
+        push    1
+        set     x
+@while_276
+        get     x
+        call    sqr
+        push    50
+        lt
+        ifn     end_276
+        get     x
+        dup
+        dref
+        flip
+        dup
+        push    1
+        add
+        rset
+        call    sqr
+        print
+        jump    while_276
+@end_276
+        call    helper1
+        call    helper2
+        get     x
+        push    5
+        gt
+        ifn     else_255
+        push    1
+        exit
+        jump    end_255
+@else_255
+@end_255
+        push    5
+        print
+        ret
+
+@helper1
+        push    4
+        call    sqr
+        print
+        push    4
+        push    1
+        call    pow
+        print
+        push    4
+        push    2
+        call    pow
+        print
+        push    4
+        push    3
+        call    pow
+        print
+        push    4
+        push    4
+        call    pow
+        print
+        push    1.100000
+        set     foo
+        push    5.000000
+        set     bar
+        get     foo
+        get     bar
+        mult
+        print
+        push    2.500000
+        call    sqr
+        print
+        ret
+
+@helper2
+        push    1
+        set     foo
+        push    2
+        set     bar
+        get     foo
+        get     bar
+        add
+        set     foo
+        get     foo
+        set     bar
+        get     bar
+        push    3
+        sub
+        call    func
+        set     baz3
+        set     baz2
+        set     baz1
+        get     baz1
+        print
+        get     baz2
+        print
+        get     baz3
+        print
+        push    1
+        push    2
+        push    3
+        set     baz3
+        set     baz2
+        set     baz1
+        get     baz1
+        print
+        get     baz2
+        print
+        get     baz3
+        print
+        get     foo
+        get     bar
+        add
+        print
+        push    4
+        call    fun_if
+        ret
+
+@func
+        set     x
+        get     x
+        print
+        push    5
+        print
+        push    100
+        push    200
+        push    300
+        ret
+
+@fun_if
+        set     y
+        get     y
+        push    5
+        gt
+        ifn     else_33
+        push    -5
+        print
+        jump    end_33
+@else_33
+        get     y
+        push    3
+        gt
+        ifn     else_21
+        push    -3
+        print
+        jump    end_21
+@else_21
+        push    -2
+        print
+@end_21
+@end_33
+        ret
+

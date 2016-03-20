@@ -1,0 +1,7 @@
+
+; main function
+@main	push		'ABCDEFG'
+		push		'Hello, world! This is a string. Test Test Test Test Test'
+		print
+		push		1
+		exit

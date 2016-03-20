@@ -1,0 +1,25 @@
+END -> endline END | e
+
+FUNDEC -> NAME END ( END ) END { END BODY END } END
+
+BODY -> { LINE BODY } | e
+
+LINE = U END LINE | e
+
+IFELSE -> if ( EXP ) BODY | if ( EXP ) BODY else BODY
+LOOP -> while ( EXP ) BODY
+
+U -> start ? start : start | if start END then END start END else END start end | T
+T -> S||T | S or T | S
+S -> R^^S | R xor S | R
+R -> Q&&R | Q and R | Q
+Q -> P|Q | P
+P -> N^P | N
+O -> M&O | M
+N -> M==N | M is N | M!=N | M isnot N | M
+M -> L<M | L<=M | L>M | L>=M | L
+L -> K<<L | K>>L | K
+K -> J+K | J-K | J
+J -> I*J | I/J | I%J | I div J | I
+I -> !H | ~H | ++H | --H | H++ | H-- | +H | -H | H
+H -> (start) | G
