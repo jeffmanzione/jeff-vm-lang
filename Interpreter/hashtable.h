@@ -24,9 +24,10 @@ typedef struct {
 } Hashtable;
 
 Hashtable *create_hash_table(int size);
-unsigned int hash(Hashtable *hashtable, const char *str);
-Object *get(Hashtable *hashtable, const char *str);
+unsigned int hash(const Hashtable *hashtable, const char *str);
+Object *get(const Hashtable *hashtable, const char *str);
 int insert(Hashtable *hashtable, const char *str, Object *obj);
 void free_table(Hashtable *hashtable, Deleter del);
+void iterate_table(Hashtable *hashtable, Action act);
 
 #endif /* HASHTABLE_H_ */

@@ -13,6 +13,7 @@
 #include <errno.h>
 
 #include "context.h"
+#include "class.h"
 #include "hashtable.h"
 #include "queue.h"
 #include "shared.h"
@@ -163,9 +164,39 @@ void goto_main(InstructionMemory *ins_mem, char ** ids) {
   }
 }
 
+// Ex: class Doge:fields{age,breed},methods{new(2),speak(0)}
+void read_class(char line[], InstructionMemory *ins_mem) {
+
+  Composite *class = composite_class_load_src(line);
+
+  instructions_insert_class(ins_mem, class);
+  //composite_class_print_sumary(class);
+}
+
+void set_method_address(InstructionMemory *ins_mem, char fun_id[]) {
+  char *start, *end;
+  char class_name[ID_SZ], fun_name[ID_SZ];
+  fun_name[0] = '\0';
+  start = fun_id + 1;
+  end = start;
+  advance_to_next(&end, '_');
+  fill_str(class_name, start, end);
+  start = ++end;
+  strcat(fun_name, start);
+  //printf("%s.%s()\n", class_name, fun_name);
+
+  Object class = instructions_get_class_by_id(ins_mem,
+      instructions_get_class_by_name(ins_mem, class_name));
+
+  Object *int_obj = NEW(int_obj, Object)
+  int_obj->type = INTEGER;
+  int_obj->int_value = ins_mem->index - 1;
+  insert(class.comp->methods, fun_name, int_obj);
+}
+
 int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
   char line[MAX_LINE_LEN];
-  //char *pch;
+//char *pch;
   Word word;
   char *str;
   int num_ins, adr;
@@ -175,13 +206,18 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
   queue_init(&strs);
   queue_init(&ins_indices);
 
-  // holds all indices of labels
+// holds all indices of labels
   Hashtable *id_table = create_hash_table(TABLE_SZ);
 
   while (NULL != fgets(line, MAX_LINE_LEN, in)) {
 
 //    printf("%s", line);
 //    fflush(stdout);
+
+    if (starts_with(line, "class")) {
+      read_class(line, ins_mem);
+      continue;
+    }
 
     memset(&ins, 0, sizeof(Instruction));
 
@@ -195,8 +231,13 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
     while ('@' == word.word[0]) {
       //printf("!!! %s\n", pch);
       //fflush(stdout);
-      insert(id_table, word.word + 1, (Object *) ins_mem->index);
-      // in case the label is not on the same line as the first ins
+      if ('_' == word.word[1]) {
+        set_method_address(ins_mem, word.word + 1);
+        //printf("Function: '%s'\n", word.word + 1);
+      } else {
+        insert(id_table, word.word + 1, (Object *) ins_mem->index);
+        // in case the label is not on the same line as the first ins
+      }
       if (!read_word_prog(&word, line, word.new_index)) {
         fgets(line, MAX_LINE_LEN, in);
         read_word_prog(&word, line, 0);
@@ -373,6 +414,24 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
     } else if (MATCHES(word.word, INSTRUCTIONS[SWAP])) {
       ins.op = SWAP;
 
+    } else if (MATCHES(word.word, INSTRUCTIONS[OGET])) {
+      ins.op = OGET;
+      get_id(&word, line, ins.id);
+
+    } else if (MATCHES(word.word, INSTRUCTIONS[OCALL])) {
+      ins.op = OCALL;
+      get_id(&word, line, ins.id);
+
+    } else if (MATCHES(word.word, INSTRUCTIONS[ORET])) {
+      ins.op = ORET;
+
+    } else if (MATCHES(word.word, INSTRUCTIONS[ONEW])) {
+      ins.op = ONEW;
+
+    } else if (MATCHES(word.word, INSTRUCTIONS[CLSG])) {
+      ins.op = CLSG;
+      get_address(&word, line, &ins, &ids, ins_mem->index);
+
     } else {
       printf("%s\n", word.word);
       fflush(stdout);
@@ -411,22 +470,28 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
     //printf(">>>%d\n", index);
     //fflush(stdout);
     switch (ins_mem->ins[index].op) {
-    case (JUMP):
-    case (CALL):
-    case (IFEQ):
-    case (IF):
-    case (IFN):
-      //printf("%s\n", ids[index]);
-      //fflush(stdout);
-      adr = (int) get(id_table, ids[index]);
-      //printf("\t%d\n", adr);
-      //fflush(stdout);
-      CHECK(FAILURE == adr, "No known label.")
-      ins_mem->ins[index].adr = adr - 1;
-      free(ids[index]);
-      break;
-    default:
-      break;
+      case (JUMP):
+      case (CALL):
+      case (IFEQ):
+      case (IF):
+      case (IFN):
+        //printf("%s\n", ids[index]);
+        //fflush(stdout);
+        adr = (int) get(id_table, ids[index]);
+        //printf("\t%d\n", adr);
+        //fflush(stdout);
+        CHECK(FAILURE == adr, "No known label.")
+        ins_mem->ins[index].adr = adr - 1;
+        free(ids[index]);
+        break;
+      case (CLSG):
+        adr = instructions_get_class_by_name(ins_mem, ids[index]);
+        CHECK(FAILURE == adr, "No known label.")
+        ins_mem->ins[index].int_val = adr;
+        free(ids[index]);
+        break;
+      default:
+        break;
     }
   }
 
@@ -449,11 +514,27 @@ int load_instructions(FILE *in, InstructionMemory *ins_mem) {
   return num_ins;
 }
 
+void read_class_bin(FILE *file, InstructionMemory *ins_mem) {
+  Composite *class = composite_class_load_bin(file, ins_mem);
+  instructions_insert_class(ins_mem, class);
+// TODO
+}
+
 int load_bytecode(FILE *in, InstructionMemory *ins_mem) {
   int num_ins = 0;
   int size;
+
+  while (TRUE) {
+    if ('\0' == fgetc(in)) {
+      break;
+    }
+    read_class_bin(in, ins_mem);
+  }
+
   while (TRUE) {
     size = fread(&ins_mem->ins[num_ins++], sizeof(Instruction), 1, in);
+    //printf("%d, Ins: %s\n", size, INSTRUCTIONS[ins_mem->ins[num_ins - 1].op]);
+    //fflush(stdout);
     if (1 != size) {
       break;
     }

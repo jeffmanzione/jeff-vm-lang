@@ -36,7 +36,7 @@ Hashtable *create_hash_table(int size) {
   return new_table;
 }
 
-unsigned int hash(Hashtable *hashtable, const char *str) {
+unsigned int hash(const Hashtable *hashtable, const char *str) {
   unsigned int hashval;
 
   /* we start our hash out at 0 */
@@ -58,7 +58,7 @@ unsigned int hash(Hashtable *hashtable, const char *str) {
   return hashval % hashtable->size;
 }
 
-H_List *lookup_id(Hashtable *hashtable, const char *str) {
+H_List *lookup_id(const Hashtable *hashtable, const char *str) {
   H_List *list;
   unsigned int hashval = hash(hashtable, str);
 
@@ -73,7 +73,7 @@ H_List *lookup_id(Hashtable *hashtable, const char *str) {
   return NULL;
 }
 
-Object *get(Hashtable *hashtable, const char *str) {
+Object *get(const Hashtable *hashtable, const char *str) {
   H_List *list = lookup_id(hashtable, str);
   if (NULL == list) {
     return NULL;
@@ -94,8 +94,8 @@ int insert(Hashtable *hashtable, const char *id, Object *obj) {
   /* Does item already exist? */
   current_list = lookup_id(hashtable, id);
   /* item already exists, don't insert it again. */
-  if (current_list != NULL)
-    return 2;
+  /*if (current_list != NULL)
+    return 2;*/
   /* Insert into list */
   new_list->id = strdup(id);
   new_list->obj = obj;
@@ -121,11 +121,32 @@ void free_table(Hashtable *hashtable, Deleter del) {
       temp = list;
       list = list->next;
       free(temp->id);
-      del(temp);
+      del(temp->obj);
+      free(temp);
     }
   }
 
   /* Free the table itself */
   free(hashtable->table);
   free(hashtable);
+}
+
+void iterate_table(Hashtable *hashtable, Action act) {
+  int i;
+  H_List *list, *temp;
+
+  if (hashtable == NULL)
+    return;
+
+  /* Free the memory for every item in the table, including the
+   * strings themselves.
+   */
+  for (i = 0; i < hashtable->size; i++) {
+    list = hashtable->table[i];
+    while (list != NULL) {
+      temp = list;
+      list = list->next;
+      act(temp->obj);
+    }
+  }
 }

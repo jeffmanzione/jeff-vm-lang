@@ -25,6 +25,7 @@
 #define CLASS_KEYWORD      "class"
 #define FIELD_KEYWORD      "field"
 #define IMPORT_KEYWORD     "import"
+#define NEW_KEYWORD        "new"
 
 #define AS_KEYWORD         "as"
 #define TYPE_INT_KEYWORD   "Int"

@@ -13,23 +13,42 @@
 
 #include "array.h"
 
+void do_nothing(void *none) {
+
+}
+
 int is_whitespace(const char c) {
   return ' ' == c || '\t' == c;
 }
 
 int ends_with(const char *str, const char *suffix) {
   if (!str || !suffix) {
-    return 0;
+    return FALSE;
   }
 
   size_t lenstr = strlen(str);
   size_t lensuffix = strlen(suffix);
 
   if (lensuffix > lenstr) {
-    return 0;
+    return FALSE;
   }
 
   return 0 == strncmp(str + lenstr - lensuffix, suffix, lensuffix);
+}
+
+int starts_with(const char *str, const char *prefix) {
+  if (!str || !prefix) {
+    return FALSE;
+  }
+
+  size_t lenstr = strlen(str);
+  size_t lenprefix = strlen(prefix);
+
+  if (lenprefix > lenstr) {
+    return FALSE;
+  }
+
+  return 0 == strncmp(str, prefix, lenprefix);
 }
 
 int contains_char(const char str[], char c) {
@@ -41,6 +60,24 @@ int contains_char(const char str[], char c) {
   }
 
   return FALSE;
+}
+
+void read_word_from_stream(FILE *stream, char *buff) {
+  int i = 0;
+  while ('\0' != (buff[i++] = fgetc(stream)))
+    ;
+}
+
+void advance_to_next(char **ptr, const char c) {
+  while (c != **ptr) {
+    (*ptr)++;
+  }
+}
+
+// Ex: class Doge:fields{age,breed,}methods{new(2),speak(0),}
+void fill_str(char buff[], char *start, char *end) {
+  buff[0] = '\0';
+  strncat(buff, start, end - start);
 }
 
 void append(FILE *head, FILE *tail) {
@@ -65,6 +102,8 @@ void delete_object_helper(Object *obj) {
    free(obj->str);
    } else*/if (ARRAY == obj->type) {
     array_delete(obj->array);
+  } else if (COMPOSITE == obj->type) {
+    composite_delete(obj->comp);
   }
 
   free(obj);
@@ -119,6 +158,13 @@ void object_print(const Object obj, FILE *out) {
   fflush(out);
 }
 
+Object to_ref(Object *obj) {
+  Object ref;
+  ref.type = REFERENCE;
+  ref.ref = obj;
+  return ref;
+}
+
 Object deref(Object obj) {
   if (REFERENCE == obj.type) {
     return *obj.ref;
@@ -127,58 +173,29 @@ Object deref(Object obj) {
 }
 
 char *object_to_string(const Object obj) {
-  char buf[STR_NUM_BUF_SZ];
+
   char *str;
-  int len;
-  /*if (STRING == obj.type) {
-   str = NEW_ARRAY(str, strlen(obj.str) + 1, char)
-   strncpy(str, obj.str, strlen(obj.str));
-   } else*/if (FLOATING == obj.type) {
-    len = sprintf(buf, "%f", obj.float_value);
-    str = NEW_ARRAY(str, len + 1, char)
-    strncpy(str, buf, len);
-  } else if (INTEGER == obj.type) {
-    len = sprintf(buf, "%d", obj.int_value);
-    str = NEW_ARRAY(str, len + 1, char)
-    strncpy(str, buf, len);
-  } else if (CHARACTER == obj.type) {
-    len = sprintf(buf, "%c", obj.char_value);
-    str = NEW_ARRAY(str, len + 1, char)
-    strncpy(str, buf, len);
-  } else if (NONE == obj.type) {
-    len = sprintf(buf, "%s", "(None)");
-    str = NEW_ARRAY(str, len + 1, char)
-    strncpy(str, buf, len);
+  if (ARRAY == obj.type) {
+    str = NEW_ARRAY(str, array_size(obj.array) + 1, char)
+    int i;
+    //printf("%d\n", array_size(obj.array));
+    for (i = 0; i < array_size(obj.array); i++) {
+      Object t = array_get(obj.array, i);
+      //printf("t %d\n", t.ref->type);
+      //fflush(stdout);
+      Object obj = deref(t);
+
+      CHECK(CHARACTER != obj.type,
+          "Cannot convert an array that is not of characters to a string!")
+      str[i] = obj.char_value;
+    }
+    str[i] = '\0';
   } else {
+    printf("Was a %d\n", obj.type);
     EXIT_WITH_MSG("Tried to convert something unexpected to a string.")
   }
 
   return str;
-}
-
-/*Object object_to_string_object(const Object obj) {
- char *tmp = object_to_string(obj);
- Object new;
- new.type = STRING;
- new.str = tmp;
-
- return new;
- }*/
-
-char *object_string_merge(const Object first, const Object second) {
-  char *result, *first_s, *second_s;
-
-  first_s = object_to_string(first);
-  second_s = object_to_string(second);
-
-  result = NEW_ARRAY(result, strlen(first_s) + strlen(second_s) + 1, char)
-
-  strcpy(result, first_s);
-  strcat(result, second_s);
-
-  free(first_s);
-  free(second_s);
-  return result;
 }
 
 Object string_create(const char str[]) {
@@ -234,3 +251,14 @@ char char_unesc(char u) {
       return u;
   }
 }
+
+// Appends the method name in label form to the specified label.
+void method_to_label(const char *class_name, const char method_name[],
+    char *label) {
+  strcat(label, "_");
+  strcat(label, class_name);
+  strcat(label, "_");
+  strcat(label, method_name);
+  //strcat(label, "_");
+}
+

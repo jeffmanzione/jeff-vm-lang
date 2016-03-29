@@ -24,7 +24,8 @@ Context *context_open(Context *context) {
 
 Context *context_close(Context *context) {
   Context *parent_context = context->parent;
-  free_table(context->table, object_delete);
+  // TODO cleanup
+  //free_table(context->table, object_delete);
   if (TRUE == context->new_ip) {
     free(context->ip);
   }

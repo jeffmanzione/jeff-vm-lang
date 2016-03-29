@@ -17,12 +17,17 @@ typedef struct _Instruction Instruction;
 #include "context.h"
 #include "stack.h"
 
-#define MEM_SZ   4096
+#define MEM_SZ                 4096
+#define DEFAULT_CLASS_ARRAY_SZ 16
 
-#define NUM_VAL(obj) ((INTEGER == obj.type) ? obj.int_value : \
-                     ((FLOATING == obj.type) ? obj.float_value : \
+#define WHICH_MEMBER           "_which_"
+
+#define NUM_VAL(obj) ((INTEGER == obj.type)   ? obj.int_value : \
+                     ((FLOATING == obj.type)  ? obj.float_value : \
                      ((CHARACTER == obj.type) ? obj.char_value : \
-                     0)))
+                     ((ARRAY == obj.type)     ? (int) obj.array : \
+                     ((COMPOSITE == obj.type) ? (int) obj.comp : \
+                     0)))))
 
 #define BIN_A(op, new, n_suffix, first, second) \
     new.n_suffix = NUM_VAL(first) op NUM_VAL(second);
@@ -117,6 +122,7 @@ typedef enum {
   OCALL,
   ORET,
   OGET,
+  CLSG, // Class get
   // Reference instructions
   RSET,
   DREF,
@@ -139,7 +145,12 @@ typedef struct _Instruction {
 typedef struct {
   Instruction *ins;
   int index;
-  int num_ins;
+  size_t num_ins;
+
+  Object *classes;
+  Hashtable *classes_ht;
+  size_t num_classes, class_array_capacity;
+
 } InstructionMemory;
 
 int execute(const Instruction ins, InstructionMemory *ins_mem,
@@ -147,5 +158,9 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
 
 int instructions_init(InstructionMemory *instructs, size_t capacity);
 void instructions_finalize(InstructionMemory *instructs);
+void instructions_insert_class(InstructionMemory *instructs, Composite *class);
+int instructions_get_class_by_name(InstructionMemory *instructs,
+    const char class_name[]);
+Object instructions_get_class_by_id(InstructionMemory *instructs, int id);
 
 #endif /* INSTRUCTION_H_ */

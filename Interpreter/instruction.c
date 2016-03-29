@@ -9,17 +9,18 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "array.h"
+#include "class.h"
+#include "hashtable.h"
 
 char *INSTRUCTIONS[] = { "nop", "exit", "push", "pushm", "pop", "flip", "set",
     "get", "open", "close", "jump", "call", "ret", "print", "dup", "not", "add",
     "sub", "mult", "div", "mod", "printn", "and", "or", "xor", "eq", "lt",
     "lte", "gt", "gte", "if", "ifn", "ifeq", "toi", "tof", "anew", "aadd",
     "aget", "aset", "aenq", "adeq", "apush", "apop", "ains", "arem", "alen",
-    "alsh", "arsh", "ccall", "onew", "ocall", "oret", "oget", "rset", "dref",
-    "swap" };
+    "alsh", "arsh", "ccall", "onew", "ocall", "oret", "oget", "clsg", "rset",
+    "dref", "swap" };
 
 void execute_exit(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
@@ -45,6 +46,11 @@ void execute_array_binary(const Instruction ins, InstructionMemory *ins_mem,
 void execute_array_ternary(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
 
+void execute_composites(const Instruction ins, InstructionMemory *ins_mem,
+    Context **context, Stack *stack);
+void execute_composites_id(const Instruction ins, InstructionMemory *ins_mem,
+    Context **context, Stack *stack);
+
 void execute_unary_addr(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
 void execute_bin_addr(const Instruction ins, InstructionMemory *ins_mem,
@@ -58,11 +64,65 @@ int instructions_init(InstructionMemory *instructs, size_t capacity) {
   instructs->ins = (Instruction *) calloc(capacity, sizeof(Instruction));
   instructs->num_ins = capacity;
   instructs->index = 0;
+  instructs->classes_ht = create_hash_table(TABLE_SZ);
+  instructs->class_array_capacity = DEFAULT_CLASS_ARRAY_SZ;
+  instructs->classes = NEW_ARRAY(instructs->classes, DEFAULT_CLASS_ARRAY_SZ,
+      Object)
+  instructs->num_classes = 0;
+
   return capacity;
 }
 
 void instructions_finalize(InstructionMemory *instructs) {
   free(instructs->ins);
+  if (NULL != instructs->classes_ht) {
+    // TODO
+    free_table(instructs->classes_ht, do_nothing);
+  }
+  if (NULL != instructs->classes) {
+    free(instructs->classes);
+  }
+}
+
+void instructions_insert_class(InstructionMemory *instructs, Composite *class) {
+  if (instructs->num_classes == instructs->class_array_capacity) {
+    instructs->class_array_capacity += DEFAULT_CLASS_ARRAY_SZ;
+    instructs->classes = RENEW(instructs->classes,
+        instructs->class_array_capacity, Object)
+  }
+
+  Object int_obj;
+  int_obj.type = INTEGER;
+  int_obj.int_value = instructs->num_classes;
+
+  Object *obj = &instructs->classes[instructs->num_classes++];
+  obj->type = COMPOSITE;
+  obj->comp = class;
+
+  char *class_name = object_to_string(*composite_get(class, "name"));
+  insert(instructs->classes_ht, class_name, obj);
+
+  composite_set(class, WHICH_MEMBER, int_obj);
+
+  free(class_name);
+  //composite_class_print_sumary(class);
+}
+
+int instructions_get_class_by_name(InstructionMemory *instructs,
+    const char class_name[]) {
+  Object *comp_obj = get(instructs->classes_ht, class_name);
+
+  NULL_CHECK(comp_obj, "Class could not be found upon lookup!")
+
+  return deref(*composite_get(comp_obj->comp, WHICH_MEMBER)).int_value;
+}
+
+Object instructions_get_class_by_id(InstructionMemory *instructs, int id) {
+
+  CHECK(instructs->num_classes <= id,
+      "Bad class specified in bytecode. Beyond limit.")
+
+  return instructs->classes[id];
 }
 
 int execute(const Instruction ins, InstructionMemory *ins_mem,
@@ -71,8 +131,10 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
   //fflush(stdout);
   Object val, tmp;
   Object first, second;
-  //char *str;
+//char *str;
   switch (ins.op) {
+    case (NOP):
+      break;
     case (EXIT):
       execute_exit(ins, ins_mem, context, stack);
       return TRUE;
@@ -152,7 +214,6 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
     case (NOT):
     case (TOI):
     case (TOF):
-    case (NOP):
       execute_unary(ins, ins_mem, context, stack);
       break;
     case (DUP):
@@ -183,6 +244,13 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
     case (AREM):
     case (ALEN):
       execute_array(ins, ins_mem, context, stack);
+      break;
+    case (ONEW):
+    case (OCALL):
+    case (ORET):
+    case (OGET):
+    case (CLSG):
+      execute_composites(ins, ins_mem, context, stack);
       break;
     default:
       printf(">>> %d\n", ins.op);
@@ -237,8 +305,6 @@ void execute_unary(const Instruction ins, InstructionMemory *ins_mem,
       val.float_value = (double) NUM_VAL(val);
       val.type = FLOATING;
       push_stack(stack, val);
-      break;
-    case (NOP):
       break;
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_unary!")
@@ -502,6 +568,7 @@ void execute_addr(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
   switch (ins.op) {
     case (JUMP):
+      //printf("INS[44]: %s\n", INSTRUCTIONS[ins_mem->ins[44].op]); fflush(stdout);
       *((*context)->ip) = ins.adr;
       break;
     case (CALL):
@@ -560,12 +627,13 @@ void execute_lookup(const Instruction ins, InstructionMemory *ins_mem,
         val.ref = val_ptr;
       }
       push_stack(stack, val);
-      //printf("Getting value of '%s' which is of %d.\n", ins.id, val_ptr->type);
+      //printf("Getting value of '%s' which is of %d.\n", ins.id, val_ptr->type); fflush(stdout);
       break;
     case (SET):
       val = deref(pop_stack(stack));
+      //printf("\nSETTING %s %d\n", ins.id, val.type);
       context_set(ins.id, val, *context);
-      //printf("Setting value of '%s' which is of %d.\n", ins.id, val.type);
+      //printf("!!! %d\n", context_lookup(ins.id, *context)->type);
       break;
     case (RSET):
       val = deref(pop_stack(stack));
@@ -579,6 +647,83 @@ void execute_lookup(const Instruction ins, InstructionMemory *ins_mem,
       break;
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_lookup!")
+  }
+}
+
+void execute_composites(const Instruction ins, InstructionMemory *ins_mem,
+    Context **context, Stack *stack) {
+  Object obj;
+  switch (ins.op) {
+    case (ORET):
+      *context = context_close(*context);
+      break;
+    case (CLSG):
+      obj = instructions_get_class_by_id(ins_mem, ins.int_val);
+      push_stack(stack, obj);
+      break;
+    case (OCALL):
+    case (OGET):
+    case (ONEW):
+      execute_composites_id(ins, ins_mem, context, stack);
+      break;
+    default:
+      EXIT_WITH_MSG("Unexpected instruction for execute_composites!")
+  }
+}
+
+void ocall_fun(const char fun_name[], InstructionMemory *ins_mem,
+    Context **context, Object comp_obj) {
+  int adr;
+  *context = context_open(*context);
+  (*context)->ip = NEW((*context)->ip, int)
+  (*context)->new_ip = TRUE;
+  //printf("Calling %p\n", get(comp_obj.comp->class->methods, fun_name));
+  //fflush(stdout);
+
+  adr = get(comp_obj.comp->class->methods, fun_name)->int_value;
+  context_set("self", comp_obj, *context);
+  CHECK(FAILURE == adr, "No known label.");
+  *((*context)->ip) = adr;
+}
+
+void ocall_context(const Instruction ins, InstructionMemory *ins_mem,
+    Context **context, Object comp_obj) {
+  ocall_fun(ins.id, ins_mem, context, comp_obj);
+}
+
+void execute_composites_id(const Instruction ins, InstructionMemory *ins_mem,
+    Context **context, Stack *stack) {
+  Object obj = deref(pop_stack(stack)), to_get;
+
+  Object new, *tmp;
+
+  Composite *comp;
+  //char fun_name[ID_SZ];
+  CHECK(COMPOSITE != obj.type,
+      "Can only perform composite operation on composite.")
+  comp = obj.comp;
+
+  switch (ins.op) {
+    case (ONEW):
+      //CHECK(TRUE != (obj.comp->is_class), "Tried to new something not a class!")
+      new.type = COMPOSITE;
+      new.comp = composite_new(obj.comp);
+      ocall_fun("new", ins_mem, context, new);
+      break;
+    case (OCALL):
+      ocall_context(ins, ins_mem, context, obj);
+      break;
+    case (OGET):
+      tmp = composite_get(comp, ins.id);
+      to_get = to_ref(tmp);
+      if (NULL == tmp) {
+        composite_set(comp, ins.id, NONE_OBJECT);
+        to_get = to_ref(composite_get(comp, ins.id));
+      }
+      push_stack(stack, to_get);
+      break;
+    default:
+      EXIT_WITH_MSG("Unexpected instruction for execute_composites_id!")
   }
 }
 

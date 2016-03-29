@@ -37,12 +37,15 @@ void load_program(const char in_name[], const char tmp_name[],
 
   instructions_init(&i_mem, MEM_SZ);
   stack_init(&stack, MEM_SZ);
+  class_init(&i_mem);
 
   if (ends_with(in_name, ".jl")) {
     handle_sourcecode(&i_mem, file, tmp_name, out_name);
   } else if (ends_with(in_name, ".jm")) {
     handle_inscode(&i_mem, file, out_name);
   } else {
+    fclose(file);
+    file = fopen(in_name, "rb");
     handle_bytecode(&i_mem, file, out_name);
   }
 
@@ -55,6 +58,7 @@ void load_program(const char in_name[], const char tmp_name[],
 
   instructions_finalize(&i_mem);
   stack_finalize(&stack);
+  class_finalize();
 
 }
 
@@ -63,13 +67,36 @@ void handle_bytecode(InstructionMemory *i_mem, FILE *file,
   load_bytecode(file, i_mem);
 }
 
+FILE *tmp;
+InstructionMemory *glob_i_mem;
+
+void write_classes_to_bin(Object *comp_obj) {
+  char cls_start = '#';
+  fwrite(&cls_start, 1, 1, tmp);
+  composite_class_save_bin(tmp, comp_obj->comp, glob_i_mem);
+}
+
+void write_classes_to_bin_and_del(void *comp_obj) {
+  write_classes_to_bin((Object *) comp_obj);
+  object_delete(comp_obj);
+}
+
 void handle_inscode(InstructionMemory *i_mem, FILE *file, const char out_name[]) {
   int count;
+  unsigned int zero = 0;
+
   load_instructions(file, i_mem);
   fclose(file);
 
   file = fopen(out_name, "wb");
   NULL_CHECK(file, "Could not open file!")
+
+  tmp = file;
+  glob_i_mem = i_mem;
+  // TODO maybe shouldn't delete this here...
+  iterate_table(i_mem->classes_ht, write_classes_to_bin);
+
+  fwrite(&zero, 1, 1, file);
 
   count = fwrite(i_mem->ins, sizeof(Instruction), i_mem->num_ins, file);
 

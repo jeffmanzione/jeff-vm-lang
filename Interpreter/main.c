@@ -8,7 +8,7 @@
 #include "interpreter.h"
 #include "program.h"
 
-#define IN_NAME     "in.jl"
+#define IN_NAME     "temp.jl"
 #define TMP_NAME    "out.jm"
 #define OUT_NAME    "out.jb"
 

@@ -16,6 +16,7 @@ typedef struct _Instruction Instruction;
 typedef struct _Object Object;
 typedef struct _ArrayList ArrayList;
 typedef struct ArrayList Array;
+typedef struct _Composite Composite;
 
 #define TRUE      1
 #define FALSE     0
@@ -43,13 +44,14 @@ typedef struct ArrayList Array;
                                   NULL_CHECK(ref, "Failed to allocate memory.")
 
 typedef void (*Deleter)(void *);
+typedef void (*Action)(Object *);
 
 //typedef enum {
 //  NONE, INTEGER, FLOATING, STRING, ARRAY
 //} Type;
 
 typedef enum {
-  NONE, CHARACTER, INTEGER, FLOATING, ARRAY, REFERENCE,
+  NONE, CHARACTER, INTEGER, FLOATING, ARRAY, REFERENCE, COMPOSITE,
   // Instruction only
   STRING_INS,
 } Type;
@@ -62,6 +64,7 @@ typedef struct _Object {
     char char_value;
     Array *array;
     Object *ref;
+    Composite *comp;
   };
 } Object;
 
@@ -69,18 +72,29 @@ Object NONE_OBJECT;
 
 int is_whitespace(const char c);
 int ends_with(const char *str, const char *suffix);
+int starts_with(const char *str, const char *prefix);
 int contains_char(const char str[], char c);
+void read_word_from_stream(FILE *stream, char *buff);
+void advance_to_next(char **ptr, const char c);
+void fill_str(char buff[], char *start, char *end);
 
+Object to_ref(Object *obj);
 Object deref(Object obj);
 
 void append(FILE *head, FILE *tail);
 
 void object_print(const Object obj, FILE *out);
 void object_delete(void *);
+char *object_to_string(const Object obj);
 
 char *object_string_merge(const Object, const Object);
 
 Object string_create(const char str[]);
 char char_unesc(char u);
+
+void method_to_label(const char *class_name, const char method_name[],
+    char *label);
+
+void do_nothing();
 
 #endif /* SHARED_H_ */
