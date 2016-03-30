@@ -62,7 +62,11 @@ def main {
     
     doge_info(doge1)
     
-    print_strln(Doge.class.class.class.name)
+    println(Doge.class.class.class.fields)
+    
+    arr = [1,2,2,4]
+    arr[2]++
+    println(arr)
     
     owner1.adopt(doge1)
     owner1.adopt(doge2)

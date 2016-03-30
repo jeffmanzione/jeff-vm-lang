@@ -193,7 +193,6 @@ void parse(Queue *queue, FILE *out) {
   FILE *tmp = tmpfile();
   //FILE *tmp = out;
 
-
   parse_top_level(queue, tmp);
 
   free_table(fun_names, do_nothing);
@@ -1211,39 +1210,50 @@ void parse_exp_unary(Queue *queue, FILE *out) {
   } else {
     parse_exp_obj_item(queue, out);
 
-    if (nextIsAndRemove(queue, INC)) {
-      write_ins_default(DUP, out);
-      write_ins_default(DREF, out);
-      write_ins_default(FLIP, out);
-      write_ins_default(DUP, out);
-      write_ins_value(PUSH, 1, out);
-      write_ins_default(ADD, out);
-      write_ins_default(RSET, out);
+    while (TRUE) {
+      if (nextIsAndRemove(queue, INC)) {
+        write_ins_default(DUP, out);
+        write_ins_default(DREF, out);
+        write_ins_default(FLIP, out);
+        write_ins_default(DUP, out);
+        write_ins_value(PUSH, 1, out);
+        write_ins_default(ADD, out);
+        write_ins_default(RSET, out);
 
-    } else if (nextIsAndRemove(queue, DEC)) {
-      write_ins_default(DUP, out);
-      write_ins_default(DREF, out);
-      write_ins_default(FLIP, out);
-      write_ins_default(DUP, out);
-      write_ins_value(PUSH, 1, out);
-      write_ins_default(MINUS, out);
-      write_ins_default(RSET, out);
+      } else if (nextIsAndRemove(queue, DEC)) {
+        write_ins_default(DUP, out);
+        write_ins_default(DREF, out);
+        write_ins_default(FLIP, out);
+        write_ins_default(DUP, out);
+        write_ins_value(PUSH, 1, out);
+        write_ins_default(MINUS, out);
+        write_ins_default(RSET, out);
+      } else if (nextIsAndRemove(queue, LBRAC)) {
+        parse_exp(queue, out);
+
+        CHECK(!nextIsAndRemove(queue, RBRAC), "Expected ].");
+
+        write_ins_default(AGET, out);
+
+      } else {
+        break;
+      }
     }
   }
 
-  parse_exp_subscript(queue, out);
+  //parse_exp_subscript(queue, out);
 }
 
 void parse_exp_subscript(Queue *queue, FILE *out) {
 
   // Array subscripting
-    while (nextIsAndRemove(queue, LBRAC)) {
-      parse_exp(queue, out);
+  while (nextIsAndRemove(queue, LBRAC)) {
+    parse_exp(queue, out);
 
-      CHECK(!nextIsAndRemove(queue, RBRAC), "Expected ].");
+    CHECK(!nextIsAndRemove(queue, RBRAC), "Expected ].");
 
-      write_ins_default(AGET, out);
-    }
+    write_ins_default(AGET, out);
+  }
 }
 
 //void parse_exp_obj_item(Queue *queue, FILE *out) {

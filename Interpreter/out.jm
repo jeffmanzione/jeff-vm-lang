@@ -1,6 +1,6 @@
-class Owner:fields{name,pets,} methods{new(1),adopt(1),}
-class Kitty:fields{size,} methods{new(1),speak(0),}
-class Doge:fields{name,breed,age,} methods{new(3),speak(0),}
+class Owner:fields{name,fields,methods,name,pets,} methods{new(1),adopt(1),}
+class Kitty:fields{name,fields,methods,size,} methods{new(1),speak(0),}
+class Doge:fields{name,fields,methods,name,breed,age,} methods{new(3),speak(0),}
 
 @println
         set     var
@@ -173,13 +173,13 @@ class Doge:fields{name,breed,age,} methods{new(3),speak(0),}
 @main
         push    0
         set     i
-@for_163
+@for_186
         get     i
         clsg    Doge
         oget    methods
         alen
         lt
-        ifn     end_163
+        ifn     end_186
         clsg    Doge
         oget    methods
         get     i
@@ -189,8 +189,8 @@ class Doge:fields{name,breed,age,} methods{new(3),speak(0),}
         push    1
         add
         set     i
-        jump    for_163
-@end_163
+        jump    for_186
+@end_186
         push    'owner1'
         clsg    Owner
         onew
@@ -216,22 +216,44 @@ class Doge:fields{name,breed,age,} methods{new(3),speak(0),}
         get     owner1
         get     tmp
         eq
-        ifn     else_86
+        ifn     else_109
         push    'True'
         call    print_strln
-        jump    end_86
-@else_86
+        jump    end_109
+@else_109
         push    'False'
         call    print_strln
-@end_86
+@end_109
         get     doge1
         call    doge_info
         clsg    Doge
         oget    class
         oget    class
         oget    class
-        oget    name
-        call    print_strln
+        oget    fields
+        call    println
+        anew
+        push    1
+        aadd
+        push    2
+        aadd
+        push    2
+        aadd
+        push    4
+        aadd
+        set     arr
+        get     arr
+        push    2
+        aget
+        dup
+        dref
+        flip
+        dup
+        push    1
+        add
+        rset
+        get     arr
+        call    println
         get     doge1
         get     owner1
         ocall   adopt

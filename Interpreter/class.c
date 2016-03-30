@@ -47,6 +47,10 @@ Composite *composite_class_new(const char class_name[]) {
   methods.type = ARRAY;
   composite_set(class, "methods", methods);
 
+  composite_class_add_field(class, "name");
+  composite_class_add_field(class, "fields");
+  composite_class_add_field(class, "methods");
+
   class->methods = create_hash_table(DEFAULT_COMPOSITE_HT_SZ);
 
   return class;
