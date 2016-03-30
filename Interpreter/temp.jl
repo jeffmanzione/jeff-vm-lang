@@ -62,14 +62,14 @@ def main {
     
     doge_info(doge1)
     
-    print_strln((((Doge.class).class).class).name)
+    print_strln(Doge.class.class.class.name)
     
     owner1.adopt(doge1)
     owner1.adopt(doge2)
     owner1.adopt(kitty1)
     
     for i=0, i < |owner1.pets|, i=i+1
-        (owner1.pets[i]).speak()
+        owner1.pets[i].speak()
     
 }
 

@@ -76,6 +76,7 @@ void parse_exp_mult_div(Queue *, FILE *);
 void parse_exp_array_transfer(Queue *, FILE *);
 void parse_exp_casting(Queue *, FILE *);
 void parse_exp_unary(Queue *, FILE *);
+void parse_exp_subscript(Queue *, FILE *);
 void parse_exp_parens(Queue *, FILE *);
 void parse_exp_obj_item(Queue *, FILE *out);
 

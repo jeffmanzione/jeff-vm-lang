@@ -191,6 +191,8 @@ void parse(Queue *queue, FILE *out) {
   classes = create_hash_table(TABLE_SZ);
 
   FILE *tmp = tmpfile();
+  //FILE *tmp = out;
+
 
   parse_top_level(queue, tmp);
 
@@ -1229,15 +1231,19 @@ void parse_exp_unary(Queue *queue, FILE *out) {
     }
   }
 
-// Array subscripting
-  while (nextIsAndRemove(queue, LBRAC)) {
-    parse_exp(queue, out);
+  parse_exp_subscript(queue, out);
+}
 
-    CHECK(!nextIsAndRemove(queue, RBRAC), "Expected ].");
+void parse_exp_subscript(Queue *queue, FILE *out) {
 
-    write_ins_default(AGET, out);
-  }
+  // Array subscripting
+    while (nextIsAndRemove(queue, LBRAC)) {
+      parse_exp(queue, out);
 
+      CHECK(!nextIsAndRemove(queue, RBRAC), "Expected ].");
+
+      write_ins_default(AGET, out);
+    }
 }
 
 //void parse_exp_obj_item(Queue *queue, FILE *out) {
@@ -1283,51 +1289,59 @@ void parse_exp_unary(Queue *queue, FILE *out) {
 //  fclose(tmp);
 //}
 
-void parse_exp_obj_item(Queue *queue, FILE *out) {
-//printf("parse_exp_obj_item()\n");
-//fflush(stdout);
-
-  FILE *tmp = tmpfile();
-
-  Token item;
-
-  parse_exp_parens(queue, tmp);
+void parse_exp_obj_item_helper(Queue *queue, FILE *prev_buffer,
+    FILE *total_accum, FILE *out) {
 
   if (!nextIsAndRemove(queue, PERIOD)) {
-    append(out, tmp);
-    fclose(tmp);
+    append(total_accum, prev_buffer);
+    append(out, total_accum);
     return;
   }
 
-  item = *((Token *) queue_peek(queue));
+  Token item = *((Token *) queue_peek(queue));
 
   CHECK(!nextIsAndRemove(queue, WORD), "Expected object field to be word.")
 
   if (nextIsAndRemove(queue, LPAREN)) {
     Token *tok_next = queue_peek(queue);
     if (RPAREN != tok_next->type) {
-      parse_exp_tuple(queue, out);
+      parse_exp_tuple(queue, total_accum);
     }
 
     CHECK(!nextIsAndRemove(queue, RPAREN), "Expected ). 2");
 
-    append(out, tmp);
+    append(total_accum, prev_buffer);
     if (MATCHES(item.text, NEW_KEYWORD)) {
-      write_ins_default(ONEW, out);
+      write_ins_default(ONEW, total_accum);
     } else {
-      write_ins_id(OCALL, item.text, out);
+      write_ins_id(OCALL, item.text, total_accum);
     }
 
   } else {
-    append(out, tmp);
-    write_ins_id(OGET, item.text, out);
+    append(total_accum, prev_buffer);
+    write_ins_id(OGET, item.text, total_accum);
   }
 
-  fclose(tmp);
+  parse_exp_subscript(queue, total_accum);
+
+  FILE *my_level = tmpfile();
+  parse_exp_obj_item_helper(queue, total_accum, my_level, out);
+  fclose(my_level);
 }
 
+void parse_exp_obj_item(Queue *queue, FILE *out) {
+//printf("parse_exp_obj_item()\n");
+//fflush(stdout);
 
+  FILE *tmp = tmpfile();
 
+  parse_exp_parens(queue, tmp);
+
+  FILE *my_level = tmpfile();
+  parse_exp_obj_item_helper(queue, tmp, my_level, out);
+  fclose(my_level);
+  fclose(tmp);
+}
 
 void parse_exp_parens(Queue *queue, FILE *out) {
 //printf("parse_exp_parens()\n");

@@ -173,13 +173,13 @@ class Doge:fields{name,breed,age,} methods{new(3),speak(0),}
 @main
         push    0
         set     i
-@for_171
+@for_163
         get     i
         clsg    Doge
         oget    methods
         alen
         lt
-        ifn     end_171
+        ifn     end_163
         clsg    Doge
         oget    methods
         get     i
@@ -189,8 +189,8 @@ class Doge:fields{name,breed,age,} methods{new(3),speak(0),}
         push    1
         add
         set     i
-        jump    for_171
-@end_171
+        jump    for_163
+@end_163
         push    'owner1'
         clsg    Owner
         onew
@@ -216,14 +216,14 @@ class Doge:fields{name,breed,age,} methods{new(3),speak(0),}
         get     owner1
         get     tmp
         eq
-        ifn     else_94
+        ifn     else_86
         push    'True'
         call    print_strln
-        jump    end_94
-@else_94
+        jump    end_86
+@else_86
         push    'False'
         call    print_strln
-@end_94
+@end_86
         get     doge1
         call    doge_info
         clsg    Doge
@@ -243,13 +243,13 @@ class Doge:fields{name,breed,age,} methods{new(3),speak(0),}
         ocall   adopt
         push    0
         set     i
-@for_34
+@for_32
         get     i
         get     owner1
         oget    pets
         alen
         lt
-        ifn     end_34
+        ifn     end_32
         get     owner1
         oget    pets
         get     i
@@ -259,8 +259,8 @@ class Doge:fields{name,breed,age,} methods{new(3),speak(0),}
         push    1
         add
         set     i
-        jump    for_34
-@end_34
+        jump    for_32
+@end_32
         push    1
         exit
 
