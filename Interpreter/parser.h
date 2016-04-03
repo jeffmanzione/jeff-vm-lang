@@ -26,6 +26,9 @@
 #define FIELD_KEYWORD      "field"
 #define IMPORT_KEYWORD     "import"
 #define NEW_KEYWORD        "new"
+#define SELF_KEYWORD       "self"
+#define SUPER_KEYWORD       "super"
+
 
 #define AS_KEYWORD         "as"
 #define TYPE_INT_KEYWORD   "Int"
@@ -43,46 +46,54 @@ extern char *KEYWORDS[];
 #define FIRST_COL_INDEX  8
 #define SECOND_COL_INDEX 16
 
+typedef struct {
+    Queue     *tok_q;
+    Hashtable *fun_names;
+    Hashtable *classes;
+    Queue      classes_queue;
+    FILE      *top;
+} Parser;
+
 void parse(Queue *, FILE *);
 
-void parse_top_level(Queue *, FILE *);
-void parse_elements(Queue *, FILE *);
+void parse_top_level(Parser *, FILE *);
+void parse_elements(Parser *, FILE *);
 
-void parse_class(Queue *, FILE *);
-void parse_class_body(Queue *, FILE *, Composite *, const char *);
-void parse_class_item(Queue *, FILE *, Composite *, const char *);
-void parse_class_field(Queue *, FILE *, Composite *, const char *);
-void parse_class_method(Queue *, FILE *, Composite *, const char *);
+void parse_class(Parser *, FILE *);
+void parse_class_body(Parser *, FILE *, Composite *, const char *);
+void parse_class_item(Parser *, FILE *, Composite *, const char *);
+void parse_class_field(Parser *, FILE *, Composite *, const char *);
+void parse_class_method(Parser *, FILE *, Composite *, const char *);
 
-void parse_fun(Queue *, FILE *);
-int parse_fun_arguments(Queue *, FILE *);
-void parse_body(Queue *, FILE *);
-void parse_line(Queue *, FILE *);
+void parse_fun(Parser *, FILE *);
+int parse_fun_arguments(Parser *, FILE *);
+void parse_body(Parser *, FILE *);
+void parse_line(Parser *, FILE *);
 
-void parse_exp(Queue *, FILE *);
-int parse_exp_tuple(Queue *, FILE *);
-void parse_exp_for(Queue *, FILE *);
-void parse_exp_while(Queue *, FILE *);
-void parse_exp_if(Queue *, FILE *);
-void parse_exp_assign(Queue *, FILE *);
-void parse_exp_assign_array(Queue *, FILE *);
-void parse_exp_or(Queue *, FILE *);
-void parse_exp_xor(Queue *, FILE *);
-void parse_exp_and(Queue *, FILE *);
-void parse_exp_eq(Queue *, FILE *);
-void parse_exp_lt_gt(Queue *, FILE *);
-void parse_exp_add_sub(Queue *, FILE *);
-void parse_exp_mult_div(Queue *, FILE *);
-void parse_exp_array_transfer(Queue *, FILE *);
-void parse_exp_casting(Queue *, FILE *);
-void parse_exp_unary(Queue *, FILE *);
-void parse_exp_subscript(Queue *, FILE *);
-void parse_exp_parens(Queue *, FILE *);
-void parse_exp_obj_item(Queue *, FILE *out);
+void parse_exp(Parser *, FILE *);
+int parse_exp_tuple(Parser *, FILE *);
+void parse_exp_for(Parser *, FILE *);
+void parse_exp_while(Parser *, FILE *);
+void parse_exp_if(Parser *, FILE *);
+void parse_exp_assign(Parser *, FILE *);
+void parse_exp_assign_array(Parser *, FILE *);
+void parse_exp_or(Parser *, FILE *);
+void parse_exp_xor(Parser *, FILE *);
+void parse_exp_and(Parser *, FILE *);
+void parse_exp_eq(Parser *, FILE *);
+void parse_exp_lt_gt(Parser *, FILE *);
+void parse_exp_add_sub(Parser *, FILE *);
+void parse_exp_mult_div(Parser *, FILE *);
+void parse_exp_array_transfer(Parser *, FILE *);
+void parse_exp_casting(Parser *, FILE *);
+void parse_exp_unary(Parser *, FILE *);
+void parse_exp_subscript(Parser *, FILE *);
+void parse_exp_parens(Parser *, FILE *);
+void parse_exp_obj_item(Parser *, FILE *);
 
-void parse_exp_array_dec(Queue *, FILE *);
+void parse_exp_array_dec(Parser *, FILE *);
 
-void parse_exp_num_or_id(Queue *, FILE *);
+void parse_exp_num_or_id(Parser *, FILE *);
 
 void write_ins_default(Op op, FILE *);
 void write_ins_none(FILE *);

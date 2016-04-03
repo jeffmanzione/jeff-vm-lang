@@ -167,7 +167,7 @@ void goto_main(InstructionMemory *ins_mem, char ** ids) {
 // Ex: class Doge:fields{age,breed},methods{new(2),speak(0)}
 void read_class(char line[], InstructionMemory *ins_mem) {
 
-  Composite *class = composite_class_load_src(line);
+  Composite *class = composite_class_load_src(line, ins_mem);
 
   instructions_insert_class(ins_mem, class);
   //composite_class_print_sumary(class);
@@ -191,7 +191,7 @@ void set_method_address(InstructionMemory *ins_mem, char fun_id[]) {
   Object *int_obj = NEW(int_obj, Object)
   int_obj->type = INTEGER;
   int_obj->int_value = ins_mem->index - 1;
-  insert(class.comp->methods, fun_name, int_obj);
+  hashtable_insert(class.comp->methods, fun_name, int_obj);
 }
 
 int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
@@ -207,7 +207,7 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
   queue_init(&ins_indices);
 
 // holds all indices of labels
-  Hashtable *id_table = create_hash_table(TABLE_SZ);
+  Hashtable *id_table = hashtable_create(TABLE_SZ);
 
   while (NULL != fgets(line, MAX_LINE_LEN, in)) {
 
@@ -235,7 +235,7 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
         set_method_address(ins_mem, word.word + 1);
         //printf("Function: '%s'\n", word.word + 1);
       } else {
-        insert(id_table, word.word + 1, (Object *) ins_mem->index);
+        hashtable_insert(id_table, word.word + 1, (Object *) ins_mem->index);
         // in case the label is not on the same line as the first ins
       }
       if (!read_word_prog(&word, line, word.new_index)) {
@@ -262,7 +262,7 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
 //        fflush(stdout);
       }
 
-    } else if (MATCHES(word.word, INSTRUCTIONS[PUSH])) {
+    } else if (MATCHES(word.word, INSTRUCTIONS[POP])) {
       ins.op = POP;
 
     } else if (MATCHES(word.word, INSTRUCTIONS[ADD])) {
@@ -428,6 +428,10 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
     } else if (MATCHES(word.word, INSTRUCTIONS[ONEW])) {
       ins.op = ONEW;
 
+    } else if (MATCHES(word.word, INSTRUCTIONS[SCALL])) {
+      ins.op = SCALL;
+      get_id(&word, line, ins.id);
+
     } else if (MATCHES(word.word, INSTRUCTIONS[CLSG])) {
       ins.op = CLSG;
       get_address(&word, line, &ins, &ids, ins_mem->index);
@@ -477,7 +481,7 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
       case (IFN):
         //printf("%s\n", ids[index]);
         //fflush(stdout);
-        adr = (int) get(id_table, ids[index]);
+        adr = (int) hashtable_lookup(id_table, ids[index]);
         //printf("\t%d\n", adr);
         //fflush(stdout);
         CHECK(FAILURE == adr, "No known label.")

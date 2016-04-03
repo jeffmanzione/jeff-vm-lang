@@ -73,7 +73,10 @@ InstructionMemory *glob_i_mem;
 void write_classes_to_bin(Object *comp_obj) {
   char cls_start = '#';
   fwrite(&cls_start, 1, 1, tmp);
-  composite_class_save_bin(tmp, comp_obj->comp, glob_i_mem);
+  // Save class if not Class class.
+  if (class_class != comp_obj->comp) {
+    composite_class_save_bin(tmp, comp_obj->comp, glob_i_mem);
+  }
 }
 
 void write_classes_to_bin_and_del(void *comp_obj) {
@@ -94,7 +97,7 @@ void handle_inscode(InstructionMemory *i_mem, FILE *file, const char out_name[])
   tmp = file;
   glob_i_mem = i_mem;
   // TODO maybe shouldn't delete this here...
-  iterate_table(i_mem->classes_ht, write_classes_to_bin);
+  hashtable_iterate(i_mem->classes_ht, write_classes_to_bin);
 
   fwrite(&zero, 1, 1, file);
 

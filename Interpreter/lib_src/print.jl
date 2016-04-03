@@ -11,3 +11,7 @@ def print_strln(str) {
 	print_str(str)
 	print_str('\n')
 }
+
+;def print_strs(a) print_str(flatten(a))
+
+;def print_strsln(a) print_strln(flatten(a))

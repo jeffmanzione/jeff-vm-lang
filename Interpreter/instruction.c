@@ -19,8 +19,8 @@ char *INSTRUCTIONS[] = { "nop", "exit", "push", "pushm", "pop", "flip", "set",
     "sub", "mult", "div", "mod", "printn", "and", "or", "xor", "eq", "lt",
     "lte", "gt", "gte", "if", "ifn", "ifeq", "toi", "tof", "anew", "aadd",
     "aget", "aset", "aenq", "adeq", "apush", "apop", "ains", "arem", "alen",
-    "alsh", "arsh", "ccall", "onew", "ocall", "oret", "oget", "clsg", "rset",
-    "dref", "swap" };
+    "alsh", "arsh", "ccall", "onew", "ocall", "scall", "oret", "oget", "clsg",
+    "rset", "dref", "swap" };
 
 void execute_exit(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
@@ -64,7 +64,7 @@ int instructions_init(InstructionMemory *instructs, size_t capacity) {
   instructs->ins = (Instruction *) calloc(capacity, sizeof(Instruction));
   instructs->num_ins = capacity;
   instructs->index = 0;
-  instructs->classes_ht = create_hash_table(TABLE_SZ);
+  instructs->classes_ht = hashtable_create(TABLE_SZ);
   instructs->class_array_capacity = DEFAULT_CLASS_ARRAY_SZ;
   instructs->classes = NEW_ARRAY(instructs->classes, DEFAULT_CLASS_ARRAY_SZ,
       Object)
@@ -77,7 +77,7 @@ void instructions_finalize(InstructionMemory *instructs) {
   free(instructs->ins);
   if (NULL != instructs->classes_ht) {
     // TODO
-    free_table(instructs->classes_ht, do_nothing);
+    hashtable_free(instructs->classes_ht, do_nothing);
   }
   if (NULL != instructs->classes) {
     free(instructs->classes);
@@ -100,7 +100,7 @@ void instructions_insert_class(InstructionMemory *instructs, Composite *class) {
   obj->comp = class;
 
   char *class_name = object_to_string(*composite_get(class, "name"));
-  insert(instructs->classes_ht, class_name, obj);
+  hashtable_insert(instructs->classes_ht, class_name, obj);
 
   composite_set(class, WHICH_MEMBER, int_obj);
 
@@ -110,7 +110,7 @@ void instructions_insert_class(InstructionMemory *instructs, Composite *class) {
 
 int instructions_get_class_by_name(InstructionMemory *instructs,
     const char class_name[]) {
-  Object *comp_obj = get(instructs->classes_ht, class_name);
+  Object *comp_obj = hashtable_lookup(instructs->classes_ht, class_name);
 
   NULL_CHECK(comp_obj, "Class could not be found upon lookup!")
 
@@ -123,6 +123,13 @@ Object instructions_get_class_by_id(InstructionMemory *instructs, int id) {
       "Bad class specified in bytecode. Beyond limit.")
 
   return instructs->classes[id];
+}
+
+Object instructions_get_class_object_by_name(InstructionMemory *instructs,
+    const char class_name[]) {
+  NULL_CHECK(instructs, "InstructionMemory * was null!");
+  return instructions_get_class_by_id(instructs,
+      instructions_get_class_by_name(instructs, class_name));
 }
 
 int execute(const Instruction ins, InstructionMemory *ins_mem,
@@ -246,6 +253,7 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
       execute_array(ins, ins_mem, context, stack);
       break;
     case (ONEW):
+    case (SCALL):
     case (OCALL):
     case (ORET):
     case (OGET):
@@ -664,6 +672,7 @@ void execute_composites(const Instruction ins, InstructionMemory *ins_mem,
     case (OCALL):
     case (OGET):
     case (ONEW):
+    case (SCALL):
       execute_composites_id(ins, ins_mem, context, stack);
       break;
     default:
@@ -671,8 +680,8 @@ void execute_composites(const Instruction ins, InstructionMemory *ins_mem,
   }
 }
 
-void ocall_fun(const char fun_name[], InstructionMemory *ins_mem,
-    Context **context, Object comp_obj) {
+void ocall_fun_helper(const char fun_name[], InstructionMemory *ins_mem,
+    Context **context, Object comp_obj, Class *class) {
   int adr;
   *context = context_open(*context);
   (*context)->ip = NEW((*context)->ip, int)
@@ -680,15 +689,37 @@ void ocall_fun(const char fun_name[], InstructionMemory *ins_mem,
   //printf("Calling %p\n", get(comp_obj.comp->class->methods, fun_name));
   //fflush(stdout);
 
-  adr = get(comp_obj.comp->class->methods, fun_name)->int_value;
+  Object *adr_obj = hashtable_lookup(class->methods, fun_name);
+  while (NULL == adr_obj) {
+    Object *super = composite_get(class, "super");
+    CHECK(NONE == super->type, "Object does not support specified method!")
+
+    class = super->comp;
+    adr_obj = hashtable_lookup(class->methods, fun_name);
+  }
+
+  adr = adr_obj->int_value;
+
   context_set("self", comp_obj, *context);
+  context_set("super", comp_obj, *context);
   CHECK(FAILURE == adr, "No known label.");
   *((*context)->ip) = adr;
+}
+
+void ocall_fun(const char fun_name[], InstructionMemory *ins_mem,
+    Context **context, Object comp_obj) {
+  ocall_fun_helper(fun_name, ins_mem, context, comp_obj, comp_obj.comp->class);
 }
 
 void ocall_context(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Object comp_obj) {
   ocall_fun(ins.id, ins_mem, context, comp_obj);
+}
+
+void scall_context(const Instruction ins, InstructionMemory *ins_mem,
+    Context **context, Object comp_obj) {
+  ocall_fun_helper(ins.id, ins_mem, context, comp_obj,
+      composite_get(comp_obj.comp->class, "super")->comp);
 }
 
 void execute_composites_id(const Instruction ins, InstructionMemory *ins_mem,
@@ -698,7 +729,7 @@ void execute_composites_id(const Instruction ins, InstructionMemory *ins_mem,
   Object new, *tmp;
 
   Composite *comp;
-  //char fun_name[ID_SZ];
+//char fun_name[ID_SZ];
   CHECK(COMPOSITE != obj.type,
       "Can only perform composite operation on composite.")
   comp = obj.comp;
@@ -713,13 +744,14 @@ void execute_composites_id(const Instruction ins, InstructionMemory *ins_mem,
     case (OCALL):
       ocall_context(ins, ins_mem, context, obj);
       break;
+    case (SCALL):
+      scall_context(ins, ins_mem, context, obj);
+      break;
     case (OGET):
-      tmp = composite_get(comp, ins.id);
+      tmp = composite_get_even_if_not_present(comp, ins.id);
+      NULL_CHECK(tmp, "Class does not support this field!")
       to_get = to_ref(tmp);
-      if (NULL == tmp) {
-        composite_set(comp, ins.id, NONE_OBJECT);
-        to_get = to_ref(composite_get(comp, ins.id));
-      }
+
       push_stack(stack, to_get);
       break;
     default:

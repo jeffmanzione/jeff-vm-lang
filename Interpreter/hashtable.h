@@ -23,11 +23,11 @@ typedef struct {
   H_List **table; /* the table elements */
 } Hashtable;
 
-Hashtable *create_hash_table(int size);
+Hashtable *hashtable_create(int size);
 unsigned int hash(const Hashtable *hashtable, const char *str);
-Object *get(const Hashtable *hashtable, const char *str);
-int insert(Hashtable *hashtable, const char *str, Object *obj);
-void free_table(Hashtable *hashtable, Deleter del);
-void iterate_table(Hashtable *hashtable, Action act);
+Object *hashtable_lookup(const Hashtable *hashtable, const char *str);
+int hashtable_insert(Hashtable *hashtable, const char *str, Object *obj);
+void hashtable_free(Hashtable *hashtable, Deleter del);
+void hashtable_iterate(Hashtable *hashtable, Action act);
 
 #endif /* HASHTABLE_H_ */

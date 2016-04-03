@@ -12,10 +12,10 @@
 
 #include "array.h"
 
-Composite *class_class = NULL;
+Class *class_class = NULL;
 
 void class_init(InstructionMemory *instructs) {
-  class_class = composite_class_new("Class");
+  class_class = composite_class_new("Class", NULL);
   class_class->class = class_class;
 
   Object class_obj;
@@ -24,15 +24,21 @@ void class_init(InstructionMemory *instructs) {
 
   composite_set(class_class, "class", class_obj);
 
+  composite_class_add_field(class_class, "name");
+  composite_class_add_field(class_class, "fields");
+  composite_class_add_field(class_class, "methods");
+  composite_class_add_field(class_class, "super");
+
   instructions_insert_class(instructs, class_class);
+
 }
 
 void class_finalize() {
 
 }
 
-Composite *composite_class_new(const char class_name[]) {
-  Object fields, methods;
+Class *composite_class_new(const char class_name[], Class *super_class) {
+  Object fields, methods, super;
 
   Composite *class = composite_new(class_class);
   class->is_class = TRUE;
@@ -47,21 +53,27 @@ Composite *composite_class_new(const char class_name[]) {
   methods.type = ARRAY;
   composite_set(class, "methods", methods);
 
-  composite_class_add_field(class, "name");
-  composite_class_add_field(class, "fields");
-  composite_class_add_field(class, "methods");
+  super.comp = super_class;
+  if (NULL == super.comp) {
+    super.type = NONE;
+  } else {
+    super.type = COMPOSITE;
+  }
+  composite_set(class, "super", super);
 
-  class->methods = create_hash_table(DEFAULT_COMPOSITE_HT_SZ);
+  composite_class_add_field(class, "class");
+
+  class->methods = hashtable_create(DEFAULT_COMPOSITE_HT_SZ);
 
   return class;
 }
 
-void composite_class_add_field(Composite *class, const char field_name[]) {
+void composite_class_add_field(Class *class, const char field_name[]) {
   Object *fields = composite_get(class, "fields");
   array_enqueue(fields->array, string_create(field_name));
 }
 
-void composite_class_add_method(Composite *class, const char method_name[],
+void composite_class_add_method(Class *class, const char method_name[],
     int num_args) {
   Object arr;
   arr.type = ARRAY;
@@ -75,7 +87,7 @@ void composite_class_add_method(Composite *class, const char method_name[],
   array_enqueue(methods->array, arr);
 }
 
-void composite_class_print_sumary(const Composite *class) {
+void composite_class_print_sumary(const Class *class) {
   char *class_name = object_to_string(*composite_get(class, "name"));
   printf("Class: %s\n  Fields:\n", class_name);
   fflush(stdout);
@@ -103,10 +115,14 @@ void composite_class_print_sumary(const Composite *class) {
   fflush(stdout);
 }
 
-Composite *composite_class_load_bin(FILE *stream, InstructionMemory *ins_mem) {
-  char buff[ID_SZ];
+Class *composite_class_load_bin(FILE *stream, InstructionMemory *ins_mem) {
+  char buff[ID_SZ], buff2[ID_SZ];
+  // Read class name.
   read_word_from_stream(stream, buff);
-  Composite *class = composite_class_new(buff);
+  // Read super class name.
+  read_word_from_stream(stream, buff2);
+  Class *class = composite_class_new(buff,
+      instructions_get_class_object_by_name(ins_mem, buff2).comp);
 
   while (TRUE) {
     read_word_from_stream(stream, buff);
@@ -132,13 +148,13 @@ Composite *composite_class_load_bin(FILE *stream, InstructionMemory *ins_mem) {
     int_obj->type = INTEGER;
     int_obj->int_value = adr;
 
-    insert(class->methods, buff, int_obj);
+    hashtable_insert(class->methods, buff, int_obj);
   }
 
   return class;
 }
 
-Composite *composite_class_load_src(char src[]) {
+Class *composite_class_load_src(char src[], InstructionMemory *ins_mem) {
   Composite *class;
   char buff[MAX_LINE_LEN];
   char buff2[MAX_LINE_LEN];
@@ -147,10 +163,15 @@ Composite *composite_class_load_src(char src[]) {
   char *end = start;
   advance_to_next(&end, ':');
   fill_str(buff, start, end);
-
-  class = composite_class_new(buff);
-
   start = ++end;
+  advance_to_next(&end, ':');
+  fill_str(buff2, start, end);
+  start = ++end;
+
+  class = composite_class_new(buff,
+      instructions_get_class_object_by_name(ins_mem, buff2).comp);
+  //class = composite_class_new(buff, );
+
   advance_to_next(&end, '{');
   start = ++end;
 
@@ -179,10 +200,13 @@ Composite *composite_class_load_src(char src[]) {
   return class;
 }
 
-void composite_class_save_src(FILE *file, Composite *class) {
+void composite_class_save_src(FILE *file, Class *class) {
   char *class_name = object_to_string(*composite_get(class, "name"));
-  fprintf(file, "class %s:fields{", class_name);
+  char *super_class_name = object_to_string(
+      *composite_get(composite_get(class, "super")->comp, "name"));
+  fprintf(file, "class %s:%s:fields{", class_name, super_class_name);
   free(class_name);
+  free(super_class_name);
   Array *fields = deref(*composite_get(class, "fields")).array;
   int i;
   for (i = 0; i < array_size(fields); i++) {
@@ -202,11 +226,17 @@ void composite_class_save_src(FILE *file, Composite *class) {
   fprintf(file, "}");
 }
 
-void composite_class_save_bin(FILE *file, Composite *class,
+void composite_class_save_bin(FILE *file, Class *class,
     InstructionMemory *ins_mem) {
   char *class_name = object_to_string(*composite_get(class, "name"));
   fwrite(class_name, strlen(class_name) + 1, 1, file);
+
   free(class_name);
+  class_name = object_to_string(
+      *composite_get(composite_get(class, "super")->comp, "name"));
+  fwrite(class_name, strlen(class_name) + 1, 1, file);
+  free(class_name);
+
   unsigned char n = 0;
 
   Array *fields = deref(*composite_get(class, "fields")).array;
@@ -226,21 +256,21 @@ void composite_class_save_bin(FILE *file, Composite *class,
     int num_args = deref(array_get(arr, 1)).int_value;
     fwrite(method_name, strlen(method_name) + 1, 1, file);
     fwrite(&num_args, sizeof(int), 1, file);
-    int adr = get(class->methods, method_name)->int_value;
+    int adr = hashtable_lookup(class->methods, method_name)->int_value;
     fwrite(&adr, sizeof(int), 1, file);
     free(method_name);
   }
   fwrite(&n, 1, 1, file);
 }
 
-void composite_class_delete(Composite *class) {
+void composite_class_delete(Class *class) {
 
 }
 
 Composite *composite_new(/*Class*/Composite *class) {
   Composite *obj = NEW(obj, Composite)
   obj->class = class;
-  obj->fields = create_hash_table(DEFAULT_COMPOSITE_HT_SZ);
+  obj->fields = hashtable_create(DEFAULT_COMPOSITE_HT_SZ);
 
   Object class_obj;
   class_obj.type = COMPOSITE;
@@ -253,9 +283,9 @@ Composite *composite_new(/*Class*/Composite *class) {
 }
 
 void composite_delete(Composite *composite) {
-  free_table(composite->fields, object_delete);
+  hashtable_free(composite->fields, object_delete);
   if (composite->methods) {
-    free_table(composite->methods, object_delete);
+    hashtable_free(composite->methods, object_delete);
   }
   free(composite);
 }
@@ -264,9 +294,26 @@ void composite_set(Composite *composite, const char field_name[], Object value) 
   Object *ptr = NEW(ptr, Object)
   ;
   *ptr = value;
-  insert(composite->fields, field_name, ptr);
+  hashtable_insert(composite->fields, field_name, ptr);
 }
 
 Object *composite_get(const Composite *composite, const char field_name[]) {
-  return get(composite->fields, field_name);
+  return hashtable_lookup(composite->fields, field_name);
+}
+
+Object *composite_get_even_if_not_present(Composite *composite,
+    const char field_name[]) {
+  Object *tmp = hashtable_lookup(composite->fields, field_name);
+
+  if (NULL == tmp) {
+    composite_set(composite, field_name, NONE_OBJECT);
+    return composite_get(composite, field_name);
+  } else {
+    return tmp;
+  }
+
+}
+
+int composite_has_field(const Composite *composite, const char field_name[]) {
+  return NULL != hashtable_lookup(composite->fields, field_name);
 }

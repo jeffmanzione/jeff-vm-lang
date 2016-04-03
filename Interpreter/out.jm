@@ -1,6 +1,8 @@
-class Owner:fields{name,fields,methods,name,pets,} methods{new(1),adopt(1),}
-class Kitty:fields{name,fields,methods,size,} methods{new(1),speak(0),}
-class Doge:fields{name,fields,methods,name,breed,age,} methods{new(3),speak(0),}
+class Owner:Class:fields{class,name,pets,} methods{new(1),adopt(1),}
+class Pet:Class:fields{class,name,say_msg,} methods{new(2),speak(0),}
+class Doge:Pet:fields{class,name,breed,age,} methods{new(3),speak(0),}
+class Kitty:Pet:fields{class,size,} methods{new(2),}
+class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
 
 @println
         set     var
@@ -108,14 +110,45 @@ class Doge:fields{name,fields,methods,name,breed,age,} methods{new(3),speak(0),}
         ains
         ret
 
-@_Doge_new
-        set     age
-        set     breed
+@_Pet_new
+        set     say_msg
         set     name
         get     self
         oget    name
         get     name
         rset
+        get     self
+        oget    say_msg
+        get     say_msg
+        rset
+        get     self
+        ret
+
+@_Pet_speak
+        anew
+        get     self
+        oget    name
+        aadd
+        push    ' says '
+        aadd
+        get     self
+        oget    say_msg
+        aadd
+        push    '!'
+        aadd
+        call    flatten
+        call    print_strln
+        ret
+
+@_Doge_new
+        set     age
+        set     breed
+        set     name
+        get     name
+        push    'wooofff'
+        get     self
+        scall   new
+        pop
         get     self
         oget    breed
         get     breed
@@ -128,22 +161,25 @@ class Doge:fields{name,fields,methods,name,breed,age,} methods{new(3),speak(0),}
         ret
 
 @_Doge_speak
-        push    'Woof!'
+        get     super
+        scall   speak
+        push    'BBBBAAAAAARRRRRKKKK!'
         call    print_strln
         ret
 
 @_Kitty_new
         set     size
+        set     name
+        get     name
+        push    'meooowww'
+        get     self
+        scall   new
+        pop
         get     self
         oget    size
         get     size
         rset
         get     self
-        ret
-
-@_Kitty_speak
-        push    'Meowwww!'
-        call    print_strln
         ret
 
 @doge_info
@@ -170,18 +206,65 @@ class Doge:fields{name,fields,methods,name,breed,age,} methods{new(3),speak(0),}
         call    print_strln
         ret
 
-@main
+@_Test_new
+        set     pets
+        get     self
+        oget    map
+        anew
+        rset
         push    0
         set     i
-@for_186
+@for_290
         get     i
-        clsg    Doge
-        oget    methods
+        get     pets
         alen
         lt
-        ifn     end_186
+        ifn     end_290
+        get     self
+        oget    map
+        push    0
+        anew
+        get     pets
+        get     i
+        aget
+        aadd
+        get     i
+        aadd
+        ains
+        get     i
+        push    1
+        add
+        set     i
+        jump    for_290
+@end_290
+        get     self
+        ret
+
+@_Test_get_map
+        get     self
+        oget    map
+        ret
+
+@main
+        anew
         clsg    Doge
         oget    methods
+        aadd
+        clsg    Doge
+        oget    super
+        oget    methods
+        aadd
+        call    flatten
+        set     methods
+        push    0
+        set     i
+@for_225
+        get     i
+        get     methods
+        alen
+        lt
+        ifn     end_225
+        get     methods
         get     i
         aget
         call    println
@@ -189,8 +272,8 @@ class Doge:fields{name,fields,methods,name,breed,age,} methods{new(3),speak(0),}
         push    1
         add
         set     i
-        jump    for_186
-@end_186
+        jump    for_225
+@end_225
         push    'owner1'
         clsg    Owner
         onew
@@ -207,6 +290,7 @@ class Doge:fields{name,fields,methods,name,breed,age,} methods{new(3),speak(0),}
         clsg    Doge
         onew
         set     doge2
+        push    'kitty1'
         push    3
         clsg    Kitty
         onew
@@ -216,14 +300,14 @@ class Doge:fields{name,fields,methods,name,breed,age,} methods{new(3),speak(0),}
         get     owner1
         get     tmp
         eq
-        ifn     else_109
+        ifn     else_150
         push    'True'
         call    print_strln
-        jump    end_109
-@else_109
+        jump    end_150
+@else_150
         push    'False'
         call    print_strln
-@end_109
+@end_150
         get     doge1
         call    doge_info
         clsg    Doge
@@ -263,6 +347,27 @@ class Doge:fields{name,fields,methods,name,breed,age,} methods{new(3),speak(0),}
         get     kitty1
         get     owner1
         ocall   adopt
+        clsg    Test
+        anew
+        get     doge1
+        aadd
+        get     doge2
+        aadd
+        get     kitty1
+        aadd
+        clsg    Test
+        onew
+        set     test1
+        get     test1
+        ocall   get_map
+        call    println
+        get     test1
+        ocall   get_map
+        push    1
+        aget
+        push    0
+        aget
+        ocall   speak
         push    0
         set     i
 @for_32

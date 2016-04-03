@@ -12,7 +12,7 @@
 Context *context_open(Context *context) {
   Context *new_context = NEW(new_context, Context)
   new_context->parent = context;
-  new_context->table = create_hash_table(TABLE_SZ);
+  new_context->table = hashtable_create(TABLE_SZ);
   if (NULL == context) {
     new_context->ip = NEW(new_context->ip, int)
     *(new_context->ip) = 0;
@@ -42,7 +42,7 @@ void context_set(const char id[], Object val, Context *context) {
   } else {
     new_val = NEW(new_val, Object)
     *new_val = val;
-    insert(context->table, id, new_val);
+    hashtable_insert(context->table, id, new_val);
   }
 }
 
@@ -50,7 +50,7 @@ Object *context_lookup_unchecked(const char id[], Context *context) {
   if (NULL == context)
     return NULL;
 
-  Object *val = get(context->table, id);
+  Object *val = hashtable_lookup(context->table, id);
 
   if (NULL == val && FALSE == context->new_ip) {
     return context_lookup_unchecked(id, context->parent);

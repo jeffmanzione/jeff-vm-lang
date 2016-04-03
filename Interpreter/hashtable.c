@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-Hashtable *create_hash_table(int size) {
+Hashtable *hashtable_create(int size) {
   Hashtable *new_table;
   int i;
   if (size < 1)
@@ -73,7 +73,7 @@ H_List *lookup_id(const Hashtable *hashtable, const char *str) {
   return NULL;
 }
 
-Object *get(const Hashtable *hashtable, const char *str) {
+Object *hashtable_lookup(const Hashtable *hashtable, const char *str) {
   H_List *list = lookup_id(hashtable, str);
   if (NULL == list) {
     return NULL;
@@ -82,7 +82,7 @@ Object *get(const Hashtable *hashtable, const char *str) {
   return list->obj;
 }
 
-int insert(Hashtable *hashtable, const char *id, Object *obj) {
+int hashtable_insert(Hashtable *hashtable, const char *id, Object *obj) {
   H_List *new_list;
   H_List *current_list;
   unsigned int hashval = hash(hashtable, id);
@@ -105,7 +105,7 @@ int insert(Hashtable *hashtable, const char *id, Object *obj) {
   return 0;
 }
 
-void free_table(Hashtable *hashtable, Deleter del) {
+void hashtable_free(Hashtable *hashtable, Deleter del) {
   int i;
   H_List *list, *temp;
 
@@ -131,7 +131,7 @@ void free_table(Hashtable *hashtable, Deleter del) {
   free(hashtable);
 }
 
-void iterate_table(Hashtable *hashtable, Action act) {
+void hashtable_iterate(Hashtable *hashtable, Action act) {
   int i;
   H_List *list, *temp;
 

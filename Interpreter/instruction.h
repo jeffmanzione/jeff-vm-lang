@@ -116,11 +116,11 @@ typedef enum {
   // TODO: Implement c function calls
   // C stuff
   CCALL,
-  // TODO: Implement composite handles
   // Composite Objects
   ONEW,
   OCALL,
-  ORET,
+  SCALL,
+  ORET, // Deprecated
   OGET,
   CLSG, // Class get
   // Reference instructions
@@ -162,5 +162,6 @@ void instructions_insert_class(InstructionMemory *instructs, Composite *class);
 int instructions_get_class_by_name(InstructionMemory *instructs,
     const char class_name[]);
 Object instructions_get_class_by_id(InstructionMemory *instructs, int id);
-
+Object instructions_get_class_object_by_name(InstructionMemory *instructs,
+    const char class_name[]);
 #endif /* INSTRUCTION_H_ */
