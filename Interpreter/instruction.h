@@ -34,13 +34,17 @@ typedef struct _Instruction Instruction;
 
 #define BIN_INT(op, new, first, second) \
     new.int_value = (int) (NUM_VAL(first) op NUM_VAL(second)); new.type = INTEGER; \
-    if (0 != new.int_value) { new.type = INTEGER; } else { new = NONE_OBJECT; } break;
+    new.type = INTEGER; break;
 
 #define BIN_CHAR(op, new, first, second) \
     new.char_value = (int) (NUM_VAL(first) op NUM_VAL(second)); new.type = CHARACTER; \
     if (0 != new.char_value) { new.type = CHARACTER; } else { new = NONE_OBJECT; } break;
 
 #define BIN_INT_FORCED(op, new, first, second) \
+    new.int_value = (int) (((int)NUM_VAL(first)) op ((int)NUM_VAL(second))); \
+    new.type = INTEGER; break;
+
+#define BIN_BOOL(op, new, first, second) \
     new.int_value = (int) (((int)NUM_VAL(first)) op ((int)NUM_VAL(second))); \
     if (0 != new.int_value) { new.type = INTEGER; } else { new = NONE_OBJECT; } break;
 
@@ -64,6 +68,7 @@ typedef enum {
   // Set/get
   SET,
   GET,
+  IS,
   // Context switches
   OPEN,
   CLOSE,
@@ -127,6 +132,8 @@ typedef enum {
   RSET,
   DREF,
   SWAP,
+  // Useful low-level instructions
+  HASH,
 } Op;
 
 extern char *INSTRUCTIONS[];
@@ -164,4 +171,13 @@ int instructions_get_class_by_name(InstructionMemory *instructs,
 Object instructions_get_class_by_id(InstructionMemory *instructs, int id);
 Object instructions_get_class_object_by_name(InstructionMemory *instructs,
     const char class_name[]);
+
+typedef struct _ProgramState {
+  InstructionMemory *i_mem;
+  Context **context;
+  Stack *stack;
+} ProgramState;
+
+ProgramState program_state(InstructionMemory *, Context **, Stack *);
+
 #endif /* INSTRUCTION_H_ */

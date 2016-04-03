@@ -28,6 +28,6 @@ unsigned int hash(const Hashtable *hashtable, const char *str);
 Object *hashtable_lookup(const Hashtable *hashtable, const char *str);
 int hashtable_insert(Hashtable *hashtable, const char *str, Object *obj);
 void hashtable_free(Hashtable *hashtable, Deleter del);
-void hashtable_iterate(Hashtable *hashtable, Action act);
+void hashtable_iterate(Hashtable *hashtable, HT_Action act);
 
 #endif /* HASHTABLE_H_ */

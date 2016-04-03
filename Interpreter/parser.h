@@ -27,12 +27,16 @@
 #define IMPORT_KEYWORD     "import"
 #define NEW_KEYWORD        "new"
 #define SELF_KEYWORD       "self"
-#define SUPER_KEYWORD       "super"
+#define SUPER_KEYWORD      "super"
 
 
 #define AS_KEYWORD         "as"
+#define IS_KEYWORD         "is"
+#define ISNT_KEYWORD       "isnt"
 #define TYPE_INT_KEYWORD   "Int"
 #define TYPE_FLOAT_KEYWORD "Float"
+#define TYPE_CHAR_KEYWORD  "Char"
+#define TYPE_ARRAY_KEYWORD "Array"
 #define NONE_KEYWORD       "None"
 #define TRUE_KEYWORD       "True"
 #define FALSE_KEYWORD      "False"
@@ -40,6 +44,7 @@
 #define MAIN_FUNCTION      "main"
 #define PRINT_FUNCTION     "print"
 #define EXIT_FUNCTION      "exit"
+#define HASH_FUNCTION      "hash_int32_t_"
 
 extern char *KEYWORDS[];
 
@@ -51,6 +56,7 @@ typedef struct {
     Hashtable *fun_names;
     Hashtable *classes;
     Queue      classes_queue;
+    char      *in_name;
     FILE      *top;
 } Parser;
 
@@ -102,8 +108,8 @@ void write_ins_value_float(Op op, double val, FILE *);
 void write_ins_value_str(Op op, char string[], FILE *);
 void write_ins_address(Op op, int adr, FILE *);
 void write_ins_id(Op op, char id[], FILE *);
-void write_ins_id_num(Op op, char id[], int num, FILE *);
+void write_ins_id_num(Op op, char id[], int num, Parser *,FILE *);
 void write_label(char id[], FILE *);
-void write_label_num(char id[], int num, FILE *);
+void write_label_num(char id[], int num, Parser *, FILE *);
 
 #endif /* PARSER_H_ */

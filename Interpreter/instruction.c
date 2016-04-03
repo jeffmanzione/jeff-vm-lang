@@ -15,12 +15,12 @@
 #include "hashtable.h"
 
 char *INSTRUCTIONS[] = { "nop", "exit", "push", "pushm", "pop", "flip", "set",
-    "get", "open", "close", "jump", "call", "ret", "print", "dup", "not", "add",
-    "sub", "mult", "div", "mod", "printn", "and", "or", "xor", "eq", "lt",
-    "lte", "gt", "gte", "if", "ifn", "ifeq", "toi", "tof", "anew", "aadd",
+    "get", "is", "open", "close", "jump", "call", "ret", "print", "dup", "not",
+    "add", "sub", "mult", "div", "mod", "printn", "and", "or", "xor", "eq",
+    "lt", "lte", "gt", "gte", "if", "ifn", "ifeq", "toi", "tof", "anew", "aadd",
     "aget", "aset", "aenq", "adeq", "apush", "apop", "ains", "arem", "alen",
     "alsh", "arsh", "ccall", "onew", "ocall", "scall", "oret", "oget", "clsg",
-    "rset", "dref", "swap" };
+    "rset", "dref", "swap", "hash" };
 
 void execute_exit(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
@@ -205,6 +205,7 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
     case (OR):
     case (XOR):
     case (EQ):
+    case (IS):
     case (LT):
     case (LTE):
     case (GT):
@@ -221,6 +222,7 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
     case (NOT):
     case (TOI):
     case (TOF):
+    case (HASH):
       execute_unary(ins, ins_mem, context, stack);
       break;
     case (DUP):
@@ -296,13 +298,22 @@ void execute_unary(const Instruction ins, InstructionMemory *ins_mem,
   Object val = deref(pop_stack(stack));
   switch (ins.op) {
     case (NOT):
-      val.int_value = !val.int_value;
+      if (NONE == val.type) {
+        val = TRUE_OBJECT;
+      } else {
+        val = NONE_OBJECT;
+      }
       push_stack(stack, val);
       break;
     case (PRINT):
       object_print(val, stdout);
       //printf("\n");
       fflush(stdout);
+      break;
+    case (HASH):
+      val.int_value = hash_code(val, program_state(ins_mem, context, stack));
+      val.type = INTEGER;
+      push_stack(stack, val);
       break;
     case (TOI):
       val.int_value = (int) NUM_VAL(val);
@@ -360,21 +371,27 @@ void execute_binary(const Instruction ins, InstructionMemory *ins_mem,
     case (MOD):
       BIN_INT_FORCED(%, new, first, second)
     case (AND):
-      BIN_INT_FORCED(&, new, first, second)
+      BIN_BOOL(&, new, first, second)
     case (OR):
-      BIN_INT_FORCED(|, new, first, second)
+      BIN_BOOL(|, new, first, second)
     case (XOR):
-      BIN_INT_FORCED(^, new, first, second)
+      BIN_BOOL(^, new, first, second)
     case (EQ):
-      BIN_INT(==, new, first, second)
+      //BIN_INT(==, new, first, second)
+      new = equals(first, second, program_state(ins_mem, context, stack));
+      break;
+    case (IS):
+      //BIN_INT(==, new, first, second)
+      new = obj_is_a(second, first, program_state(ins_mem, context, stack));
+      break;
     case (LT):
-      BIN_INT(<, new, first, second)
+      BIN_BOOL(<, new, first, second)
     case (LTE):
-      BIN_INT(<=, new, first, second)
+      BIN_BOOL(<=, new, first, second)
     case (GT):
-      BIN_INT(>, new, first, second)
+      BIN_BOOL(>, new, first, second)
     case (GTE):
-      BIN_INT(>=, new, first, second)
+      BIN_BOOL(>=, new, first, second)
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_binary!")
   }
@@ -757,5 +774,15 @@ void execute_composites_id(const Instruction ins, InstructionMemory *ins_mem,
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_composites_id!")
   }
+}
+
+ProgramState program_state(InstructionMemory *i_mem, Context **context,
+    Stack *stack) {
+  ProgramState state;
+  state.i_mem = i_mem;
+  state.context = context;
+  state.stack = stack;
+
+  return state;
 }
 

@@ -436,6 +436,11 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
       ins.op = CLSG;
       get_address(&word, line, &ins, &ids, ins_mem->index);
 
+    } else if (MATCHES(word.word, INSTRUCTIONS[IS])) {
+      ins.op = IS;
+    } else if (MATCHES(word.word, INSTRUCTIONS[HASH])) {
+      ins.op = HASH;
+
     } else {
       printf("%s\n", word.word);
       fflush(stdout);

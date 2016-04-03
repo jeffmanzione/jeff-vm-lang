@@ -70,7 +70,7 @@ void handle_bytecode(InstructionMemory *i_mem, FILE *file,
 FILE *tmp;
 InstructionMemory *glob_i_mem;
 
-void write_classes_to_bin(Object *comp_obj) {
+void write_classes_to_bin(const char id[], Object *comp_obj) {
   char cls_start = '#';
   fwrite(&cls_start, 1, 1, tmp);
   // Save class if not Class class.
@@ -79,10 +79,10 @@ void write_classes_to_bin(Object *comp_obj) {
   }
 }
 
-void write_classes_to_bin_and_del(void *comp_obj) {
-  write_classes_to_bin((Object *) comp_obj);
-  object_delete(comp_obj);
-}
+//void write_classes_to_bin_and_del(void *comp_obj) {
+//  write_classes_to_bin("", (Object *) comp_obj);
+//  object_delete(comp_obj);
+//}
 
 void handle_inscode(InstructionMemory *i_mem, FILE *file, const char out_name[]) {
   int count;
@@ -96,6 +96,7 @@ void handle_inscode(InstructionMemory *i_mem, FILE *file, const char out_name[])
 
   tmp = file;
   glob_i_mem = i_mem;
+
   // TODO maybe shouldn't delete this here...
   hashtable_iterate(i_mem->classes_ht, write_classes_to_bin);
 

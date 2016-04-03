@@ -160,8 +160,8 @@ int nextIsAndSecondIsntAndRemove(Parser *parser, TokenType first,
 
 char *KEYWORDS[] = { DEF_KEYWORD, FUN_KEYWORD, IF_KEYWORD, ELSE_KEYWORD,
 WHILE_KEYWORD, FOR_KEYWORD, BREAK_KEYWORD, RETURN_KEYWORD, AS_KEYWORD,
-NONE_KEYWORD, TRUE_KEYWORD, FALSE_KEYWORD, FUN_KEYWORD, CLASS_KEYWORD,
-FIELD_KEYWORD, IMPORT_KEYWORD, NEW_KEYWORD };
+IS_KEYWORD, NONE_KEYWORD, TRUE_KEYWORD, FALSE_KEYWORD, FUN_KEYWORD,
+CLASS_KEYWORD, FIELD_KEYWORD, IMPORT_KEYWORD, NEW_KEYWORD };
 
 int is_keyword(const char word[]) {
   int i;
@@ -188,6 +188,7 @@ void parse(Queue *queue, FILE *out) {
   parser.top = out;
   parser.fun_names = hashtable_create(TABLE_SZ);
   parser.classes = hashtable_create(TABLE_SZ);
+  parser.in_name = NULL;
 
   FILE *tmp = tmpfile();
   //FILE *tmp = out;
@@ -249,6 +250,9 @@ void parse_elements(Parser *parser, FILE *out) {
 
     Parser child_parser = *parser;
     child_parser.tok_q = &child_queue;
+    strcrepl(fn, '/', '_');
+    fn[strlen(fn_token.text) - 5] = '\0';
+    child_parser.in_name = fn;
     parse_top_level(&child_parser, out);
     fclose(child_file);
   } else {
@@ -552,12 +556,12 @@ void parse_exp_for(Parser *parser, FILE *out) {
     parse_for_args();
   }
 
-  write_label_num("for", num, out);
+  write_label_num("for", num, parser, out);
 
   append(out, cond);
   fclose(cond);
 
-  write_ins_id_num(IFN, "end", num, out);
+  write_ins_id_num(IFN, "end", num, parser, out);
 
   remove_if_present(parser, ENDLINE);
 
@@ -568,8 +572,8 @@ void parse_exp_for(Parser *parser, FILE *out) {
   append(out, aft);
   fclose(aft);
 
-  write_ins_id_num(JUMP, "for", num, out);
-  write_label_num("end", num, out);
+  write_ins_id_num(JUMP, "for", num, parser, out);
+  write_label_num("end", num, parser, out);
 //write_ins_default(CLOSE, out);
 
   remove_if_present(parser, ENDLINE);
@@ -586,19 +590,19 @@ void parse_exp_while(Parser *parser, FILE *out) {
 
 //write_ins_default(OPEN, out);
 
-  write_label_num("while", num, out);
+  write_label_num("while", num, parser, out);
 
   parse_exp(parser, out);
 
-  write_ins_id_num(IFN, "end", num, out);
+  write_ins_id_num(IFN, "end", num, parser, out);
 
   remove_if_present(parser, ENDLINE);
 
   parse_body(parser, out);
 
-  write_ins_id_num(JUMP, "while", num, out);
+  write_ins_id_num(JUMP, "while", num, parser, out);
 
-  write_label_num("end", num, out);
+  write_label_num("end", num, parser, out);
 
 //write_ins_default(CLOSE, out);
 
@@ -617,15 +621,15 @@ void parse_exp_if(Parser *parser, FILE *out) {
 
   parse_exp_if(parser, out);
 
-  write_ins_id_num(IFN, "else", num, out);
+  write_ins_id_num(IFN, "else", num, parser, out);
 
   remove_if_present(parser, ENDLINE);
 
   parse_body(parser, out);
 
-  write_ins_id_num(JUMP, "end", num, out);
+  write_ins_id_num(JUMP, "end", num, parser, out);
 
-  write_label_num("else", num, out);
+  write_label_num("else", num, parser, out);
 
   remove_if_present(parser, ENDLINE);
 
@@ -636,7 +640,7 @@ void parse_exp_if(Parser *parser, FILE *out) {
 
   remove_if_present(parser, ENDLINE);
 
-  write_label_num("end", num, out);
+  write_label_num("end", num, parser, out);
 //write_ins_default(CLOSE, out);
 }
 
@@ -768,7 +772,7 @@ void parse_exp_assign_array(Parser *parser, FILE *out) {
     parse_exp_or(parser, out);
     write_ins_default(SWAP, out);
 
-  } else if (nextThreeAreAndRemove(parser, LTHAN, EQUALS, COLON)) {
+  } else if (nextTwoAreAndRemove(parser, LTHANEQ, COLON)) {
     append(out, hold);
     parse_exp_or(parser, out);
     write_ins_default(APOP, out);
@@ -828,6 +832,11 @@ void parse_exp_assign_array(Parser *parser, FILE *out) {
       parse_exp(parser, out);
 
       write_ins_default(AINS, out);
+
+    } else if (nextIsAndRemove(parser, EQUALS)) {
+      parse_exp(parser, out);
+
+      write_ins_default(ASET, out);
 
     } else {
       printf("Was %d\n", ((Token *) queue_peek(parser->tok_q))->line);
@@ -897,13 +906,22 @@ void parse_exp_eq(Parser *parser, FILE *out) {
 //printf("parse_exp_eq()\n"); fflush(stdout);
   parse_exp_lt_gt(parser, out);
 
-  if (!nextIsAndRemove(parser, EQUIV)) {
+  if (nextIsAndRemove(parser, EQUIV)) {
+
+    parse_exp_eq(parser, out);
+
+    write_ins_default(EQ, out);
+  } else if (nextIsWordAndRemove(parser, IS_KEYWORD)) {
+    parse_exp_eq(parser, out);
+    write_ins_default(IS, out);
+  } else if (nextIsWordAndRemove(parser, ISNT_KEYWORD)) {
+    parse_exp_eq(parser, out);
+    write_ins_default(IS, out);
+    write_ins_default(NOT, out);
+  } else {
     return;
   }
 
-  parse_exp_eq(parser, out);
-
-  write_ins_default(EQ, out);
 }
 
 void parse_exp_lt_gt(Parser *parser, FILE *out) {
@@ -1505,6 +1523,8 @@ void parse_exp_num_or_id(Parser *parser, FILE *out) {
           }
         } else if (MATCHES(EXIT_FUNCTION, tok->text)) {
           write_ins_default(EXIT, out);
+        } else if (MATCHES(HASH_FUNCTION, tok->text)) {
+          write_ins_default(HASH, out);
         } else {
           write_ins_id(CALL, tok->text, out);
         }
@@ -1576,9 +1596,16 @@ void write_ins_id(Op op, char id[], FILE *out) {
   fflush(out);
 }
 
-void write_ins_id_num(Op op, char id[], int num, FILE *out) {
-  fprintf(out, "%*c%s%*c%s_%d\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
-  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', id, num);
+void write_ins_id_num(Op op, char id[], int num, Parser *parser, FILE *out) {
+  if (NULL == parser->in_name) {
+    fprintf(out, "%*c%s%*c%s_%d\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
+    SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', id,
+        num);
+  } else {
+    fprintf(out, "%*c%s%*c%s_%s_%d\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
+    SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', id,
+        parser->in_name, num);
+  }
   fflush(out);
 }
 
@@ -1587,7 +1614,11 @@ void write_label(char label[], FILE *out) {
   fflush(out);
 }
 
-void write_label_num(char label[], int num, FILE *out) {
-  fprintf(out, "@%s_%d\n", label, num);
+void write_label_num(char label[], int num, Parser *parser, FILE *out) {
+  if (NULL == parser->in_name) {
+    fprintf(out, "@%s_%d\n", label, num);
+  } else {
+    fprintf(out, "@%s_%s_%d\n", label, parser->in_name, num);
+  }
   fflush(out);
 }

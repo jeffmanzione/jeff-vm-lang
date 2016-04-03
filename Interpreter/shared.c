@@ -10,8 +10,12 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
+#include "class.h"
 #include "array.h"
+
+Object TRUE_OBJECT = (Object ) {INTEGER, {(uint64_t) 1}};
 
 void do_nothing(void *none) {
 
@@ -49,6 +53,15 @@ int starts_with(const char *str, const char *prefix) {
   }
 
   return 0 == strncmp(str, prefix, lenprefix);
+}
+
+void strcrepl(char *src, char from, char to) {
+  int i;
+  for (i = 0; i < strlen(src); i++) {
+    if (from == src[i]) {
+      src[i] = to;
+    }
+  }
 }
 
 int contains_char(const char str[], char c) {
@@ -158,11 +171,153 @@ void object_print(const Object obj, FILE *out) {
   fflush(out);
 }
 
+unsigned int hash_code_array(Array *array, ProgramState state) {
+  unsigned int hash = 0;
+  int i;
+  for (i = 0; i < array_size(array); i++) {
+    hash = hash_code(deref(array_get(array, i)), state) + (hash << 5) - hash;
+  }
+  return hash;
+}
+
+unsigned int hash_code_composite(Composite *comp, ProgramState state) {
+//  unsigned int hash = 0;
+//  int i;
+//  for (i = 0; i < sizeof(Composite); i++) {
+//    hash = ((char *) comp)[i] + (hash << 5) - hash;
+//  }
+//
+//  return hash;
+  return (unsigned int) comp;
+}
+
+unsigned int hash_code(const Object obj, ProgramState state) {
+  uint64_t ul;
+
+  switch (obj.type) {
+    case NONE:
+      return 0;
+    case CHARACTER:
+      return (unsigned int) obj.char_value;
+    case INTEGER:
+      return (unsigned int) obj.int_value;
+    case FLOATING:
+      memcpy(&ul, &obj.float_value, sizeof(double));
+      return ((unsigned int) ul) ^ ((unsigned int) (ul >> 32));
+    case ARRAY:
+      return hash_code_array(obj.array, state);
+    case COMPOSITE:
+      return hash_code_composite(obj.comp, state);
+    case REFERENCE:
+      printf("REF!!!!\n");
+      return -1;
+    default:
+      return -1;
+  }
+}
+
+Object equals_array(Array *a1, Array *a2, ProgramState state) {
+  int i;
+
+  if (a1 == a2) {
+    return TRUE_OBJECT;
+  }
+
+  if (array_size(a1) != array_size(a2)) {
+    return NONE_OBJECT;
+  }
+
+  for (i = 0; i < array_size(a1); i++) {
+    if (NONE
+        == equals(deref(array_get(a1, i)), deref(array_get(a2, i)), state).type) {
+      return NONE_OBJECT;
+    }
+  }
+  return TRUE_OBJECT;
+}
+
+Object equals_composite(Composite *c1, Composite * c2, ProgramState state) {
+  /*if (c1->class != c2->class) {
+   return NONE_OBJECT;
+   }*/
+
+  int answer = TRUE;
+
+  void equals_elt(const char id[], Object *field_val) {
+    Object *c2_v = composite_get(c2, id);
+    answer = answer && equals_ptr(c2_v, field_val, state).int_value;
+  }
+
+  hashtable_iterate(c1->fields, equals_elt);
+
+  return answer > 0 ? TRUE_OBJECT : NONE_OBJECT;
+}
+
+Object equals(Object o1, Object o2, ProgramState state) {
+  if (hash_code(o1, state) != hash_code(o2, state)) {
+    return NONE_OBJECT;
+  }
+
+  switch (o1.type) {
+    case NONE:
+      return NONE_OBJECT;
+    case CHARACTER:
+      if (o1.char_value == o2.char_value) {
+        return TRUE_OBJECT;
+      } else {
+        return NONE_OBJECT;
+      }
+    case INTEGER:
+      if (o1.int_value == o2.int_value) {
+        return TRUE_OBJECT;
+      } else {
+        return NONE_OBJECT;
+      }
+    case FLOATING:
+      if (o1.float_value == o2.float_value) {
+        return TRUE_OBJECT;
+      } else {
+        return NONE_OBJECT;
+      }
+    case ARRAY:
+      return equals_array(o1.array, o2.array, state);
+    case COMPOSITE:
+      return equals_composite(o1.comp, o2.comp, state);
+    default:
+      return NONE_OBJECT;
+  }
+}
+
+Object equals_ptr(Object *o1, Object *o2, ProgramState state) {
+  if (o1 == o2) {
+    return TRUE_OBJECT;
+  }
+  return equals(*o1, *o2, state);
+}
+
 Object to_ref(Object *obj) {
   Object ref;
   ref.type = REFERENCE;
   ref.ref = obj;
   return ref;
+}
+
+Object obj_is_a(Object type, Object to_test, ProgramState state) {
+  Class *target = type.comp;
+  Class *test = to_test.comp->class;
+  Object *super_obj;
+  do {
+    Object ans = equals_composite(target, test, state);
+    if (NONE != ans.type) {
+      return TRUE_OBJECT;
+    }
+
+    super_obj = composite_get(test, "super");
+    test = super_obj->comp;
+  } while (NONE != super_obj->type);
+
+  return NONE_OBJECT;
+
 }
 
 Object deref(Object obj) {
@@ -259,6 +414,6 @@ void method_to_label(const char *class_name, const char method_name[],
   strcat(label, class_name);
   strcat(label, "_");
   strcat(label, method_name);
-  //strcat(label, "_");
+//strcat(label, "_");
 }
 

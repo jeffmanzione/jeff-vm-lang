@@ -17,6 +17,7 @@ typedef struct _Object Object;
 typedef struct _ArrayList ArrayList;
 typedef struct ArrayList Array;
 typedef struct _Composite Composite;
+typedef struct _ProgramState ProgramState;
 
 #define TRUE      1
 #define FALSE     0
@@ -44,7 +45,7 @@ typedef struct _Composite Composite;
                                   NULL_CHECK(ref, "Failed to allocate memory.")
 
 typedef void (*Deleter)(void *);
-typedef void (*Action)(Object *);
+typedef void (*HT_Action)(const char id[], Object *);
 
 //typedef enum {
 //  NONE, INTEGER, FLOATING, STRING, ARRAY
@@ -69,6 +70,7 @@ typedef struct _Object {
 } Object;
 
 Object NONE_OBJECT;
+extern Object TRUE_OBJECT;
 
 int is_whitespace(const char c);
 int ends_with(const char *str, const char *suffix);
@@ -77,6 +79,11 @@ int contains_char(const char str[], char c);
 void read_word_from_stream(FILE *stream, char *buff);
 void advance_to_next(char **ptr, const char c);
 void fill_str(char buff[], char *start, char *end);
+
+unsigned int hash_code(const Object, ProgramState);
+Object equals(Object, Object, ProgramState);
+Object equals_ptr(Object *, Object *, ProgramState);
+Object obj_is_a(Object type, Object to_test, ProgramState);
 
 Object to_ref(Object *obj);
 Object deref(Object obj);
@@ -96,5 +103,7 @@ void method_to_label(const char *class_name, const char method_name[],
     char *label);
 
 void do_nothing();
+
+void strcrepl(char *src, char from, char to);
 
 #endif /* SHARED_H_ */

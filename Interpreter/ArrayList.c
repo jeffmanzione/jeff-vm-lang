@@ -7,10 +7,12 @@
 
 #include "ArrayList.h"
 
-#include <stdio.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "shared.h"
 
 typedef struct _ArrayList {
   int current;
@@ -30,6 +32,15 @@ void initWithSizeAndIncRate(ArrayList* const, int, int);
 /* Abstracting the print method of the Object by delegating it to the Object itself (OOP-like feature) */
 static void shift(ArrayList * const list, int index, int rooms, Shift dir);
 static void wide(ArrayList* const);
+static void widen(ArrayList * const, int);
+
+static void ensure_capacity(ArrayList * const list, int total_size) {
+  widen(list, total_size);
+//  while (total_size >= list->size) {
+//    printf("size=%d\n", list->current); fflush(stdout);
+//    wide(list);
+//  }
+}
 
 void arraryCopy(void *dest, int dIndex, const void* src, int sIndex, int len,
     int destLen, size_t size) {
@@ -80,9 +91,11 @@ void array_list_clear(ArrayList * const list) {
 }
 
 void array_list_set(ArrayList * const list, int index, Object e) {
-  if (index <= list->current) {
-    list->Objects[index] = e;
+  if (index > list->current) {
+    ensure_capacity(list, index);
+    list->current = index;
   }
+  list->Objects[index] = e;
 }
 
 Object array_list_get(ArrayList * const list, int index) {
@@ -119,25 +132,46 @@ Object array_list_dequeue(ArrayList* const list) {
   return array_list_remove(list, list->current);
 }
 
+static void widen(ArrayList* const list, int sz) {
+  //printf("A\n"); fflush(stdout);
+  list->size = sz;
+  //printf("B\n"); fflush(stdout);
+  RENEW(list->Objects, list->size, Object)
+  //printf("C\n"); fflush(stdout);
+//  arraryCopy(newArr, 0, list->Objects, 0, list->current, list->size,
+//      sizeof(Object));
+  //printf("D\n"); fflush(stdout);
+  //free(list->Objects);
+  //printf("E\n"); fflush(stdout);
+//list->Objects = newArr;
+  //printf("F\n"); fflush(stdout);
+}
+
 static void wide(ArrayList* const list) {
   list->size += list->increment_rate;
-  Object *newArr = (Object*) calloc(sizeof(Object), list->size);
-  arraryCopy(newArr, 0, list->Objects, 0, list->current, list->size,
-      sizeof(Object));
-  free(list->Objects);
-  list->Objects = newArr;
+  RENEW(list->Objects, list->size, Object)
+//  ;
+//  arraryCopy(newArr, 0, list->Objects, 0, list->current, list->size,
+//      sizeof(Object));
+//  free(list->Objects);
+//  list->Objects = newArr;
 }
 
 void array_list_insert(ArrayList * const list, int index, Object e) {
-  //printf("array_insert(list,%d,%d)\n", index, e.int_value);
-  //printf("\tlist->current = %d\n", list->current);
-  //printf("\tlist->size = %d\n", list->size);
+//  printf("array_insert(list,%d,%d)\n", index, e.int_value);
+//  printf("\tlist->current = %d\n", list->current);
+//  printf("\tlist->size = %d\n", list->size);
   if (index <= list->current && ++list->current < list->size) {
     shift(list, index, 1, RIFHT);
-    list->Objects[index] = e;
   } else {
-    array_list_enqueue(list, e);
+    ensure_capacity(list, index);
+    list->current = index;
   }
+  list->Objects[index] = e;
+
+//  printf("\tlist->current = %d\n", list->current);
+//  printf("\tlist->size = %d\n", list->size);
+
 }
 
 int array_list_is_empty(const ArrayList * const list) {

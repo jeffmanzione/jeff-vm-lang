@@ -1,8 +1,4 @@
-class Owner:Class:fields{class,name,pets,} methods{new(1),adopt(1),}
-class Pet:Class:fields{class,name,say_msg,} methods{new(2),speak(0),}
-class Doge:Pet:fields{class,name,breed,age,} methods{new(3),speak(0),}
-class Kitty:Pet:fields{class,size,} methods{new(2),}
-class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
+class Map:Class:fields{class,table,size,} methods{new(1),map_hash(1),get(1),put(2),}
 
 @println
         set     var
@@ -16,12 +12,12 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         set     str
         push    0
         set     i
-@for_44
+@for_lib_src_print_44
         get     i
         get     str
         alen
         lt
-        ifn     end_44
+        ifn     end_lib_src_print_44
         get     str
         get     i
         aget
@@ -30,8 +26,8 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         push    1
         add
         set     i
-        jump    for_44
-@end_44
+        jump    for_lib_src_print_44
+@end_lib_src_print_44
         ret
 
 @print_strln
@@ -42,352 +38,203 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         call    print_str
         ret
 
-@flatten
-        set     arr
-        anew
-        set     result
-        push    0
-        set     i
-@for_57
-        get     i
-        get     arr
-        alen
-        lt
-        ifn     end_57
-        push    0
-        set     j
-@for_40
-        get     j
-        get     arr
-        get     i
-        aget
-        alen
-        lt
-        ifn     end_40
-        get     result
-        get     result
-        alen
-        get     arr
-        get     i
-        aget
-        get     j
-        aget
-        ains
-        get     j
-        push    1
-        add
-        set     j
-        jump    for_40
-@end_40
-        get     i
-        push    1
-        add
-        set     i
-        jump    for_57
-@end_57
-        get     result
-        ret
-
-@_Owner_new
-        set     name
-        get     self
-        oget    name
-        get     name
-        rset
-        get     self
-        oget    pets
-        anew
-        rset
-        get     self
-        ret
-
-@_Owner_adopt
-        set     pet
-        get     self
-        oget    pets
-        push    0
-        get     pet
-        ains
-        ret
-
-@_Pet_new
-        set     say_msg
-        set     name
-        get     self
-        oget    name
-        get     name
-        rset
-        get     self
-        oget    say_msg
-        get     say_msg
-        rset
-        get     self
-        ret
-
-@_Pet_speak
-        anew
-        get     self
-        oget    name
-        aadd
-        push    ' says '
-        aadd
-        get     self
-        oget    say_msg
-        aadd
-        push    '!'
-        aadd
-        call    flatten
-        call    print_strln
-        ret
-
-@_Doge_new
-        set     age
-        set     breed
-        set     name
-        get     name
-        push    'wooofff'
-        get     self
-        scall   new
-        pop
-        get     self
-        oget    breed
-        get     breed
-        rset
-        get     self
-        oget    age
-        get     age
-        rset
-        get     self
-        ret
-
-@_Doge_speak
-        get     super
-        scall   speak
-        push    'BBBBAAAAAARRRRRKKKK!'
-        call    print_strln
-        ret
-
-@_Kitty_new
+@_Map_new
         set     size
-        set     name
-        get     name
-        push    'meooowww'
         get     self
-        scall   new
-        pop
+        oget    table
+        anew
+        rset
         get     self
         oget    size
         get     size
         rset
         get     self
-        ret
-
-@doge_info
-        set     doge
-        anew
-        get     doge
-        oget    name
-        aadd
-        push    ' is a '
-        aadd
-        get     doge
-        oget    breed
-        aadd
-        push    ' at age '
-        aadd
-        anew
-        get     doge
-        oget    age
-        aadd
-        aadd
-        push    '.'
-        aadd
-        call    flatten
-        call    print_strln
-        ret
-
-@_Test_new
-        set     pets
+        oget    table
+        get     size
+        push    1
+        sub
+        push    None
+        ains
         get     self
-        oget    map
-        anew
-        rset
+        ret
+
+@_Map_map_hash
+        set     key
+        get     key
+        hash
+        get     self
+        oget    size
+        mod
+        ret
+
+@_Map_get
+        set     key
+        get     key
+        get     self
+        ocall   map_hash
+        set     hv
+        get     self
+        oget    table
+        get     hv
+        aget
+        not
+        ifn     else_253
+        push    None
+        ret
+        jump    end_253
+@else_253
+@end_253
         push    0
         set     i
-@for_290
+@for_242
         get     i
-        get     pets
+        get     self
+        oget    table
+        get     hv
+        aget
         alen
         lt
-        ifn     end_290
+        ifn     end_242
+        get     key
         get     self
-        oget    map
-        push    0
-        anew
-        get     pets
+        oget    table
+        get     hv
+        aget
         get     i
         aget
-        aadd
+        push    0
+        aget
+        eq
+        ifn     else_220
+        get     self
+        oget    table
+        get     hv
+        aget
         get     i
-        aadd
-        ains
+        aget
+        push    1
+        aget
+        ret
+        jump    end_220
+@else_220
+@end_220
         get     i
         push    1
         add
         set     i
-        jump    for_290
-@end_290
-        get     self
+        jump    for_242
+@end_242
+        push    None
+        ret
         ret
 
-@_Test_get_map
+@_Map_put
+        set     value
+        set     key
+        get     key
         get     self
-        oget    map
+        ocall   map_hash
+        set     hv
+        get     self
+        oget    table
+        get     hv
+        aget
+        ifn     else_167
+        push    0
+        set     i
+@for_158
+        get     i
+        get     self
+        oget    table
+        get     hv
+        aget
+        alen
+        lt
+        ifn     end_158
+        get     key
+        get     self
+        oget    table
+        get     hv
+        aget
+        get     i
+        aget
+        push    0
+        aget
+        eq
+        ifn     else_136
+        get     self
+        oget    table
+        get     hv
+        aget
+        get     i
+        aget
+        push    1
+        aget
+        get     value
+        rset
+        ret
+        jump    end_136
+@else_136
+@end_136
+        get     i
+        push    1
+        add
+        set     i
+        jump    for_158
+@end_158
+        get     self
+        oget    table
+        get     hv
+        aget
+        push    0
+        anew
+        get     key
+        aadd
+        get     value
+        aadd
+        ains
+        jump    end_167
+@else_167
+        get     self
+        oget    table
+        get     hv
+        aget
+        anew
+        anew
+        get     key
+        aadd
+        get     value
+        aadd
+        aadd
+        rset
+@end_167
         ret
 
 @main
-        anew
-        clsg    Doge
-        oget    methods
-        aadd
-        clsg    Doge
-        oget    super
-        oget    methods
-        aadd
-        call    flatten
-        set     methods
-        push    0
-        set     i
-@for_225
-        get     i
-        get     methods
-        alen
-        lt
-        ifn     end_225
-        get     methods
-        get     i
-        aget
-        call    println
-        get     i
-        push    1
-        add
-        set     i
-        jump    for_225
-@end_225
-        push    'owner1'
-        clsg    Owner
+        push    1023
+        clsg    Map
         onew
-        set     owner1
-        push    'doge1'
-        push    'Labrador'
+        set     map
+        push    'a'
         push    2
-        clsg    Doge
-        onew
-        set     doge1
-        push    'doge2'
-        push    'Dachshund'
-        push    5
-        clsg    Doge
-        onew
-        set     doge2
-        push    'kitty1'
-        push    3
-        clsg    Kitty
-        onew
-        set     kitty1
-        get     owner1
-        set     tmp
-        get     owner1
-        get     tmp
-        eq
-        ifn     else_150
-        push    'True'
-        call    print_strln
-        jump    end_150
-@else_150
-        push    'False'
-        call    print_strln
-@end_150
-        get     doge1
-        call    doge_info
-        clsg    Doge
-        oget    class
-        oget    class
-        oget    class
-        oget    fields
+        get     map
+        ocall   put
+        push    'fish'
+        push    'kitten'
+        get     map
+        ocall   put
+        push    'a'
+        get     map
+        ocall   get
         call    println
-        anew
-        push    1
-        aadd
-        push    2
-        aadd
-        push    2
-        aadd
-        push    4
-        aadd
-        set     arr
-        get     arr
-        push    2
-        aget
-        dup
-        dref
-        flip
-        dup
-        push    1
-        add
-        rset
-        get     arr
+        push    'fish'
+        get     map
+        ocall   get
         call    println
-        get     doge1
-        get     owner1
-        ocall   adopt
-        get     doge2
-        get     owner1
-        ocall   adopt
-        get     kitty1
-        get     owner1
-        ocall   adopt
-        clsg    Test
-        anew
-        get     doge1
-        aadd
-        get     doge2
-        aadd
-        get     kitty1
-        aadd
-        clsg    Test
-        onew
-        set     test1
-        get     test1
-        ocall   get_map
+        push    'a'
+        get     map
+        ocall   get
         call    println
-        get     test1
-        ocall   get_map
-        push    1
-        aget
-        push    0
-        aget
-        ocall   speak
-        push    0
-        set     i
-@for_32
-        get     i
-        get     owner1
-        oget    pets
-        alen
-        lt
-        ifn     end_32
-        get     owner1
-        oget    pets
-        get     i
-        aget
-        ocall   speak
-        get     i
-        push    1
-        add
-        set     i
-        jump    for_32
-@end_32
         push    1
         exit
 

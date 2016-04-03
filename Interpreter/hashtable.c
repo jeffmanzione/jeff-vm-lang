@@ -84,7 +84,7 @@ Object *hashtable_lookup(const Hashtable *hashtable, const char *str) {
 
 int hashtable_insert(Hashtable *hashtable, const char *id, Object *obj) {
   H_List *new_list;
-  H_List *current_list;
+  //H_List *current_list;
   unsigned int hashval = hash(hashtable, id);
 
   /* Attempt to allocate memory for list */
@@ -92,7 +92,7 @@ int hashtable_insert(Hashtable *hashtable, const char *id, Object *obj) {
     return 1;
 
   /* Does item already exist? */
-  current_list = lookup_id(hashtable, id);
+  //current_list = lookup_id(hashtable, id);
   /* item already exists, don't insert it again. */
   /*if (current_list != NULL)
     return 2;*/
@@ -131,7 +131,7 @@ void hashtable_free(Hashtable *hashtable, Deleter del) {
   free(hashtable);
 }
 
-void hashtable_iterate(Hashtable *hashtable, Action act) {
+void hashtable_iterate(Hashtable *hashtable, HT_Action act) {
   int i;
   H_List *list, *temp;
 
@@ -144,9 +144,10 @@ void hashtable_iterate(Hashtable *hashtable, Action act) {
   for (i = 0; i < hashtable->size; i++) {
     list = hashtable->table[i];
     while (list != NULL) {
+      char *id = list->id;
       temp = list;
       list = list->next;
-      act(temp->obj);
+      act(id, temp->obj);
     }
   }
 }
