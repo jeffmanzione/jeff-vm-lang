@@ -10,13 +10,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
-typedef struct _Instruction Instruction;
-typedef struct _Object Object;
-typedef struct _ArrayList ArrayList;
-typedef struct ArrayList Array;
-typedef struct _Composite Composite;
+typedef long double          float96_t;
+typedef struct _Instruction  Instruction;
+typedef struct _Object       Object;
+typedef struct _ArrayList    ArrayList;
+typedef struct ArrayList     Array;
+typedef struct _Composite    Composite;
 typedef struct _ProgramState ProgramState;
 
 #define TRUE      1
@@ -60,12 +62,12 @@ typedef enum {
 typedef struct _Object {
   Type type;
   union {
-    int int_value;
-    double float_value;
-    char char_value;
-    Array *array;
-    Object *ref;
-    Composite *comp;
+    int64_t     int_value;
+    float96_t   float_value;
+    char        char_value;
+    Array      *array;
+    Object     *ref;
+    Composite  *comp;
   };
 } Object;
 
@@ -80,10 +82,10 @@ void read_word_from_stream(FILE *stream, char *buff);
 void advance_to_next(char **ptr, const char c);
 void fill_str(char buff[], char *start, char *end);
 
-unsigned int hash_code(const Object, ProgramState);
-Object equals(Object, Object, ProgramState);
-Object equals_ptr(Object *, Object *, ProgramState);
-Object obj_is_a(Object type, Object to_test, ProgramState);
+uint32_t hash_code(const Object, ProgramState);
+Object   equals(Object, Object, ProgramState);
+Object   equals_ptr(Object *, Object *, ProgramState);
+Object   obj_is_a(Object type, Object to_test, ProgramState);
 
 Object to_ref(Object *obj);
 Object deref(Object obj);

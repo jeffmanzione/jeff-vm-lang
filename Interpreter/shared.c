@@ -7,6 +7,7 @@
 
 #include "shared.h"
 
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -132,9 +133,9 @@ void object_print_outer(Object obj, FILE *out) {
   //printf("Type: %d\n", obj.type);
   //obj = deref(obj);
   if (INTEGER == obj.type) {
-    fprintf(out, "%d", obj.int_value);
+    fprintf(out, "%" PRId64, obj.int_value);
   } else if (FLOATING == obj.type) {
-    fprintf(out, "%f", obj.float_value);
+    fprintf(out, "%f", (double) obj.float_value);
   } else if (CHARACTER == obj.type) {
     fprintf(out, "%c", obj.char_value);
   } else if (ARRAY == obj.type) {
@@ -171,8 +172,8 @@ void object_print(const Object obj, FILE *out) {
   fflush(out);
 }
 
-unsigned int hash_code_array(Array *array, ProgramState state) {
-  unsigned int hash = 0;
+uint32_t hash_code_array(Array *array, ProgramState state) {
+  uint32_t hash = 0;
   int i;
   for (i = 0; i < array_size(array); i++) {
     hash = hash_code(deref(array_get(array, i)), state) + (hash << 5) - hash;
@@ -180,7 +181,7 @@ unsigned int hash_code_array(Array *array, ProgramState state) {
   return hash;
 }
 
-unsigned int hash_code_composite(Composite *comp, ProgramState state) {
+uint32_t hash_code_composite(Composite *comp, ProgramState state) {
 //  unsigned int hash = 0;
 //  int i;
 //  for (i = 0; i < sizeof(Composite); i++) {
@@ -188,22 +189,22 @@ unsigned int hash_code_composite(Composite *comp, ProgramState state) {
 //  }
 //
 //  return hash;
-  return (unsigned int) comp;
+  return (uint32_t) comp;
 }
 
-unsigned int hash_code(const Object obj, ProgramState state) {
+uint32_t hash_code(const Object obj, ProgramState state) {
   uint64_t ul;
 
   switch (obj.type) {
     case NONE:
       return 0;
     case CHARACTER:
-      return (unsigned int) obj.char_value;
+      return (uint32_t) obj.char_value;
     case INTEGER:
-      return (unsigned int) obj.int_value;
+      return (uint32_t) obj.int_value;
     case FLOATING:
-      memcpy(&ul, &obj.float_value, sizeof(double));
-      return ((unsigned int) ul) ^ ((unsigned int) (ul >> 32));
+      memcpy(&ul, &obj.float_value, sizeof(float96_t));
+      return (((uint32_t) ul) ^ ((uint32_t) (ul >> 32)));
     case ARRAY:
       return hash_code_array(obj.array, state);
     case COMPOSITE:

@@ -22,7 +22,7 @@ typedef struct {
 int read_word_prog(Word *, char line[], int index);
 
 
-int get_int(char *pch);
+int64_t get_int(char *pch);
 
 int load_instructions(FILE *in, InstructionMemory *ins_mem);
 int load_bytecode(FILE *in, InstructionMemory *ins_mem);

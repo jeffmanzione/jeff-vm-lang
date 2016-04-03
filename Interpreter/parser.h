@@ -37,6 +37,8 @@
 #define TYPE_FLOAT_KEYWORD "Float"
 #define TYPE_CHAR_KEYWORD  "Char"
 #define TYPE_ARRAY_KEYWORD "Array"
+#define TYPE_OBJ_KEYWORD   "Object"
+
 #define NONE_KEYWORD       "None"
 #define TRUE_KEYWORD       "True"
 #define FALSE_KEYWORD      "False"
@@ -44,7 +46,7 @@
 #define MAIN_FUNCTION      "main"
 #define PRINT_FUNCTION     "print"
 #define EXIT_FUNCTION      "exit"
-#define HASH_FUNCTION      "hash_int32_t_"
+#define HASH_FUNCTION      "hash_uint32_t_"
 
 extern char *KEYWORDS[];
 
@@ -103,8 +105,8 @@ void parse_exp_num_or_id(Parser *, FILE *);
 
 void write_ins_default(Op op, FILE *);
 void write_ins_none(FILE *);
-void write_ins_value(Op op, int val, FILE *);
-void write_ins_value_float(Op op, double val, FILE *);
+void write_ins_value(Op op, int64_t val, FILE *);
+void write_ins_value_float(Op op, float96_t val, FILE *);
 void write_ins_value_str(Op op, char string[], FILE *);
 void write_ins_address(Op op, int adr, FILE *);
 void write_ins_id(Op op, char id[], FILE *);

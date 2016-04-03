@@ -18,21 +18,21 @@
 #include "queue.h"
 #include "shared.h"
 
-int get_int(char *pch) {
+int64_t get_int(char *pch) {
   char *endptr;
-  long val = strtol(pch, &endptr, 10);
+  int64_t val = strtoll(pch, &endptr, 10);
 
   CHECK(
       (errno == ERANGE && (val == LONG_MAX || val == LONG_MIN)) || (errno != 0 && val == 0),
       "strtol error")
   CHECK(endptr == pch, "No digits were found")
 
-  return (int) val;
+  return val;
 }
 
-double get_double(char *pch) {
+float96_t get_double(char *pch) {
   char *endptr;
-  double val = strtod(pch, &endptr);
+  float96_t val = strtold(pch, &endptr);
 
   CHECK(
       (errno == ERANGE && (val == LONG_MAX || val == LONG_MIN)) || (errno != 0 && val == 0),
@@ -441,6 +441,16 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
     } else if (MATCHES(word.word, INSTRUCTIONS[HASH])) {
       ins.op = HASH;
 
+    } else if (MATCHES(word.word, INSTRUCTIONS[ISI])) {
+      ins.op = ISI;
+    } else if (MATCHES(word.word, INSTRUCTIONS[ISF])) {
+      ins.op = ISF;
+    } else if (MATCHES(word.word, INSTRUCTIONS[ISC])) {
+      ins.op = ISC;
+    } else if (MATCHES(word.word, INSTRUCTIONS[ISO])) {
+      ins.op = ISO;
+    } else if (MATCHES(word.word, INSTRUCTIONS[ISA])) {
+      ins.op = ISA;
     } else {
       printf("%s\n", word.word);
       fflush(stdout);

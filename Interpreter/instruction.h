@@ -9,7 +9,9 @@
 #define INSTRUCTION_H_
 
 #include <stddef.h>
+#include <stdint.h>
 
+#include "hashtable.h"
 #include "shared.h"
 
 typedef struct _Instruction Instruction;
@@ -25,31 +27,31 @@ typedef struct _Instruction Instruction;
 #define NUM_VAL(obj) ((INTEGER == obj.type)   ? obj.int_value : \
                      ((FLOATING == obj.type)  ? obj.float_value : \
                      ((CHARACTER == obj.type) ? obj.char_value : \
-                     ((ARRAY == obj.type)     ? (int) obj.array : \
-                     ((COMPOSITE == obj.type) ? (int) obj.comp : \
+                     ((ARRAY == obj.type)     ? (int64_t) obj.array : \
+                     ((COMPOSITE == obj.type) ? (int64_t) obj.comp : \
                      0)))))
 
 #define BIN_A(op, new, n_suffix, first, second) \
     new.n_suffix = NUM_VAL(first) op NUM_VAL(second);
 
 #define BIN_INT(op, new, first, second) \
-    new.int_value = (int) (NUM_VAL(first) op NUM_VAL(second)); new.type = INTEGER; \
+    new.int_value = (int64_t) (NUM_VAL(first) op NUM_VAL(second)); new.type = INTEGER; \
     new.type = INTEGER; break;
 
 #define BIN_CHAR(op, new, first, second) \
-    new.char_value = (int) (NUM_VAL(first) op NUM_VAL(second)); new.type = CHARACTER; \
+    new.char_value = (int64_t) (NUM_VAL(first) op NUM_VAL(second)); new.type = CHARACTER; \
     if (0 != new.char_value) { new.type = CHARACTER; } else { new = NONE_OBJECT; } break;
 
 #define BIN_INT_FORCED(op, new, first, second) \
-    new.int_value = (int) (((int)NUM_VAL(first)) op ((int)NUM_VAL(second))); \
+    new.int_value = (int64_t) (((int64_t)NUM_VAL(first)) op ((int64_t)NUM_VAL(second))); \
     new.type = INTEGER; break;
 
 #define BIN_BOOL(op, new, first, second) \
-    new.int_value = (int) (((int)NUM_VAL(first)) op ((int)NUM_VAL(second))); \
+    new.int_value = (int64_t) (((int64_t)NUM_VAL(first)) op ((int64_t)NUM_VAL(second))); \
     if (0 != new.int_value) { new.type = INTEGER; } else { new = NONE_OBJECT; } break;
 
 #define BIN_FLOAT(op, new, first, second) \
-    new.float_value = (double) (NUM_VAL(first) op NUM_VAL(second)); new.type = FLOATING; break;
+    new.float_value = (float96_t) (NUM_VAL(first) op NUM_VAL(second)); new.type = FLOATING; break;
 
 #define BIN(operator, ins, new, first, second)  \
     if (FLOATING == first.type || FLOATING == second.type) {BIN_FLOAT(operator, new, first, second);} \
@@ -134,30 +136,34 @@ typedef enum {
   SWAP,
   // Useful low-level instructions
   HASH,
+  ISI,
+  ISF,
+  ISC,
+  ISO,
+  ISA,
 } Op;
 
 extern char *INSTRUCTIONS[];
 
 typedef struct _Instruction {
-  Op op;
+  Op   op;
   Type type;
   union {
-    int int_val;
-    double float_val;
-    int adr;
-    char id[ID_SZ];
+    int64_t   int_val;
+    float96_t float_val;
+    int       adr;
+    char      id[ID_SZ];
   };
 } Instruction;
 
 typedef struct {
   Instruction *ins;
-  int index;
-  size_t num_ins;
+  int          index;
+  size_t       num_ins;
 
-  Object *classes;
-  Hashtable *classes_ht;
-  size_t num_classes, class_array_capacity;
-
+  Object      *classes;
+  Hashtable   *classes_ht;
+  size_t       num_classes, class_array_capacity;
 } InstructionMemory;
 
 int execute(const Instruction ins, InstructionMemory *ins_mem,

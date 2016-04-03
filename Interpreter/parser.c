@@ -7,6 +7,8 @@
 
 #include "parser.h"
 
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -912,8 +914,21 @@ void parse_exp_eq(Parser *parser, FILE *out) {
 
     write_ins_default(EQ, out);
   } else if (nextIsWordAndRemove(parser, IS_KEYWORD)) {
-    parse_exp_eq(parser, out);
-    write_ins_default(IS, out);
+    if (nextIsWordAndRemove(parser, TYPE_INT_KEYWORD)) {
+      write_ins_default(ISI, out);
+    } else if (nextIsWordAndRemove(parser, TYPE_FLOAT_KEYWORD)) {
+      write_ins_default(ISF, out);
+    } else if (nextIsWordAndRemove(parser, TYPE_CHAR_KEYWORD)) {
+      write_ins_default(ISC, out);
+    } else if (nextIsWordAndRemove(parser, TYPE_OBJ_KEYWORD)) {
+      write_ins_default(ISO, out);
+    } else if (nextIsWordAndRemove(parser, TYPE_ARRAY_KEYWORD)
+        || nextIsWordAndRemove(parser, "String")) {
+      write_ins_default(ISA, out);
+    } else {
+      parse_exp_eq(parser, out);
+      write_ins_default(IS, out);
+    }
   } else if (nextIsWordAndRemove(parser, ISNT_KEYWORD)) {
     parse_exp_eq(parser, out);
     write_ins_default(IS, out);
@@ -1088,137 +1103,6 @@ void parse_exp_casting(Parser *parser, FILE *out) {
 
 }
 
-//void parse_exp_unary(Parser *parser, FILE *out) {
-////printf("parse_exp_unary()\n");
-//  Token *tok = queue_peek(parser->tok_q), *tok_next1, *tok_next2;
-//
-//  if (nextIsAndRemove(parser, MINUS)) {
-//    tok_next1 = queue_peek(parser->tok_q);
-//
-//    if (nextIsAndRemove(parser, MINUS)) {
-//      tok_next2 = queue_peek(parser->tok_q);
-//      if (nextIsAndRemove(parser, WORD)) {
-//
-//        write_ins_id(GET, tok_next2->text, out);
-//        write_ins_value(PUSH, 1, out);
-//        write_ins_default(SUB, out);
-//        write_ins_id(SET, tok_next2->text, out);
-//        write_ins_id(GET, tok_next2->text, out);
-//
-//        return;
-//      } else {
-//        EXIT_WITH_MSG("Unexpected token. Expected '+'.")
-//      }
-//    } else if (INT == tok_next1->type) {
-//      int val = (int) strtol(tok_next1->text, NULL, 10);
-//      write_ins_value(PUSH, -val, out);
-//      queue_remove(parser->tok_q);
-//      free(tok_next1);
-//    } else if (FLOAT == tok_next1->type) {
-//      double val_d = strtod(tok_next1->text, NULL);
-//      write_ins_value_float(PUSH, -val_d, out);
-//      queue_remove(parser->tok_q);
-//      free(tok_next1);
-//    } else if (GTHAN != tok_next1->type) {
-//      parse_exp_obj_item(parser, out);
-//      write_ins_value(PUSH, -1, out);
-//      write_ins_default(MULT, out);
-//    } else {
-//      queue_add_front(parser->tok_q, tok);
-//      return;
-//    }
-//
-//  } else if (nextIsAndRemove(parser, TILDE)) {
-//    parse_exp_unary(parser, out);
-//    write_ins_default(NOT, out);
-//  } else if (nextIsAndRemove(parser, PLUS)) {
-//    if (nextIsAndRemove(parser, PLUS)) {
-//      tok_next2 = queue_peek(parser->tok_q);
-//      if (nextIsAndRemove(parser, WORD)) {
-//
-//        write_ins_id(GET, tok_next2->text, out);
-//        write_ins_value(PUSH, 1, out);
-//        write_ins_default(ADD, out);
-//        write_ins_id(SET, tok_next2->text, out);
-//        write_ins_id(GET, tok_next2->text, out);
-//
-//        return;
-//      } else {
-//        EXIT_WITH_MSG("Unexpected token. Expected '+'.")
-//      }
-//    } else {
-//      printf("Was %s\n", ((Token *) queue_peek(parser->tok_q))->text);
-//      EXIT_WITH_MSG("Unexpected token. Expected word or number.")
-//    }
-//
-//    parse_exp_obj_item(parser, out);
-//
-//  } else if (WORD == tok->type) {
-//    queue_remove(parser->tok_q);
-//    tok_next1 = queue_peek(parser->tok_q);
-//    if (PLUS == tok_next1->type) {
-//      queue_remove(parser->tok_q);
-//      tok_next2 = queue_peek(parser->tok_q);
-//      if (PLUS == tok_next2->type) {
-//        queue_remove(parser->tok_q);
-//
-//        write_ins_id(GET, tok->text, out);
-//        write_ins_id(GET, tok->text, out);
-//        write_ins_value(PUSH, 1, out);
-//        write_ins_default(ADD, out);
-//        write_ins_id(SET, tok->text, out);
-//
-//        free(tok);
-//        free(tok_next1);
-//        free(tok_next2);
-//
-//        return;
-//      } else {
-//        queue_add_front(parser->tok_q, tok_next1);
-//        queue_add_front(parser->tok_q, tok);
-//      }
-//    } else if (MINUS == tok_next1->type) {
-//      queue_remove(parser->tok_q);
-//      tok_next2 = queue_peek(parser->tok_q);
-//      if (MINUS == tok_next2->type) {
-//        queue_remove(parser->tok_q);
-//
-//        write_ins_id(GET, tok->text, out);
-//        write_ins_id(GET, tok->text, out);
-//        write_ins_value(PUSH, 1, out);
-//        write_ins_default(SUB, out);
-//        write_ins_id(SET, tok->text, out);
-//
-//        free(tok);
-//        free(tok_next1);
-//        free(tok_next2);
-//
-//        return;
-//      } else {
-//        queue_add_front(parser->tok_q, tok_next1);
-//        queue_add_front(parser->tok_q, tok);
-//      }
-//    } else {
-//      queue_add_front(parser->tok_q, tok);
-//    }
-//
-//    parse_exp_obj_item(parser, out);
-//
-//  } else {
-//    parse_exp_obj_item(parser, out);
-//  }
-//
-//  // Array subscripting
-//  while (nextIsAndRemove(parser, LBRAC)) {
-//    parse_exp(parser, out);
-//
-//    CHECK(!nextIsAndRemove(parser, RBRAC), "Expected ].");
-//
-//    write_ins_default(AGET, out);
-//  }
-//
-//}
-
 void parse_exp_unary(Parser *parser, FILE *out) {
 //printf("parse_exp_unary()\n");
   Token *tok_next1;
@@ -1236,10 +1120,10 @@ void parse_exp_unary(Parser *parser, FILE *out) {
     tok_next1 = queue_peek(parser->tok_q);
 
     if (INT == tok_next1->type) {
-      int val = (int) strtol(tok_next1->text, NULL, 10);
+      int64_t val = (int64_t) strtoll(tok_next1->text, NULL, 10);
       write_ins_value(PUSH, -val, out);
     } else if (FLOAT == tok_next1->type) {
-      double val_d = strtod(tok_next1->text, NULL);
+      float96_t val_d = strtold(tok_next1->text, NULL);
       write_ins_value_float(PUSH, -val_d, out);
     } else if (GTHAN != tok_next1->type) {
       queue_remove(parser->tok_q);
@@ -1316,49 +1200,6 @@ void parse_exp_subscript(Parser *parser, FILE *out) {
     write_ins_default(AGET, out);
   }
 }
-
-//void parse_exp_obj_item(Parser *parser, FILE *out) {
-////printf("parse_exp_obj_item()\n");
-////fflush(stdout);
-//
-//  FILE *tmp = tmpfile();
-//
-//  Token item;
-//
-//  parse_exp_parens(parser, tmp);
-//
-//  if (!nextIsAndRemove(parser, PERIOD)) {
-//    append(out, tmp);
-//    fclose(tmp);
-//    return;
-//  }
-//
-//  item = *((Token *) queue_peek(parser->tok_q));
-//
-//  CHECK(!nextIsAndRemove(parser, WORD), "Expected object field to be word.")
-//
-//  if (nextIsAndRemove(parser, LPAREN)) {
-//    Token *tok_next = queue_peek(parser->tok_q);
-//    if (RPAREN != tok_next->type) {
-//      parse_exp_tuple(parser, out);
-//    }
-//
-//    CHECK(!nextIsAndRemove(parser, RPAREN), "Expected ). 2");
-//
-//    append(out, tmp);
-//    if (MATCHES(item.text, NEW_KEYWORD)) {
-//      write_ins_default(ONEW, out);
-//    } else {
-//      write_ins_id(OCALL, item.text, out);
-//    }
-//
-//  } else {
-//    append(out, tmp);
-//    write_ins_id(OGET, item.text, out);
-//  }
-//
-//  fclose(tmp);
-//}
 
 void parse_exp_obj_item_helper(Parser *parser, FILE *prev_buffer,
     FILE *total_accum, char prev_word[], FILE *out) {
@@ -1461,8 +1302,8 @@ void parse_exp_array_dec(Parser *parser, FILE *out) {
 void parse_exp_num_or_id(Parser *parser, FILE *out) {
 //printf("parse_exp_num_or_id()\n");
   Token *tok = queue_peek(parser->tok_q), *tok_next;
-  int val;
-  double val_d;
+  int64_t val;
+  float96_t val_d;
   if (WORD == tok->type) {
 
     if (is_keyword(tok->text)) {
@@ -1496,7 +1337,8 @@ void parse_exp_num_or_id(Parser *parser, FILE *out) {
       }
 
       return;
-    } else if (hashtable_lookup(parser->classes, tok->text)) {
+    }
+    if (hashtable_lookup(parser->classes, tok->text)) {
       Composite *class = hashtable_lookup(parser->classes, tok->text)->comp;
       queue_remove(parser->tok_q);
       char *class_name = object_to_string(*composite_get(class, "name"));
@@ -1537,7 +1379,7 @@ void parse_exp_num_or_id(Parser *parser, FILE *out) {
     }
 
   } else if (INT == tok->type) {
-    val = (int) strtol(tok->text, NULL, 10);
+    val = (int64_t) strtoll(tok->text, NULL, 10);
     write_ins_value(PUSH, val, out);
     queue_remove(parser->tok_q);
   } else if (FLOAT == tok->type) {
@@ -1560,8 +1402,8 @@ void write_ins_default(Op op, FILE *out) {
   fflush(out);
 }
 
-void write_ins_value(Op op, int val, FILE *out) {
-  fprintf(out, "%*c%s%*c%d\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
+void write_ins_value(Op op, int64_t val, FILE *out) {
+  fprintf(out, "%*c%s%*c%"PRId64"\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
   SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', val);
   fflush(out);
 }
@@ -1572,9 +1414,9 @@ void write_ins_none(FILE *out) {
   fflush(out);
 }
 
-void write_ins_value_float(Op op, double val, FILE *out) {
+void write_ins_value_float(Op op, float96_t val, FILE *out) {
   fprintf(out, "%*c%s%*c%f\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
-  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', val);
+  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', (double) val);
   fflush(out);
 }
 

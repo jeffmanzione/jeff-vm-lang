@@ -1,4 +1,6 @@
-class Map:Class:fields{class,table,size,} methods{new(1),map_hash(1),get(1),put(2),}
+class Animal:Class:fields{class,name,age,} methods{new(2),eq(1),}
+class Dog:Animal:fields{class,breed,} methods{new(3),}
+class Cat:Animal:fields{class,size,} methods{new(3),}
 
 @println
         set     var
@@ -38,202 +40,201 @@ class Map:Class:fields{class,table,size,} methods{new(1),map_hash(1),get(1),put(
         call    print_str
         ret
 
-@_Map_new
+@_Animal_new
+        set     age
+        set     name
+        get     self
+        oget    name
+        get     name
+        rset
+        get     self
+        oget    age
+        get     age
+        rset
+        get     self
+        ret
+
+@_Animal_eq
+        set     other
+        get     self
+        oget    name
+        get     other
+        oget    name
+        eq
+        get     self
+        oget    age
+        get     other
+        oget    age
+        eq
+        and
+        ret
+        ret
+
+@_Dog_new
+        set     breed
+        set     age
+        set     name
+        get     name
+        get     age
+        get     self
+        scall   new
+        pop
+        get     self
+        oget    breed
+        get     breed
+        rset
+        get     self
+        ret
+
+@_Cat_new
         set     size
+        set     age
+        set     name
+        get     name
+        get     age
         get     self
-        oget    table
-        anew
-        rset
+        scall   new
+        pop
         get     self
         oget    size
         get     size
         rset
         get     self
-        oget    table
-        get     size
-        push    1
-        sub
-        push    None
-        ains
-        get     self
         ret
 
-@_Map_map_hash
-        set     key
-        get     key
-        hash
-        get     self
-        oget    size
-        mod
+@test_is
+        set     cls
+        set     obj
+        get     obj
+        get     cls
+        is
+        ifn     else_230
+        push    'Success'
+        jump    end_230
+@else_230
+        push    'Failure'
+@end_230
+        call    print_strln
         ret
 
-@_Map_get
-        set     key
-        get     key
-        get     self
-        ocall   map_hash
-        set     hv
-        get     self
-        oget    table
-        get     hv
-        aget
+@test_isnt
+        set     cls
+        set     obj
+        get     obj
+        get     cls
+        is
         not
-        ifn     else_253
-        push    None
-        ret
-        jump    end_253
-@else_253
-@end_253
-        push    0
-        set     i
-@for_242
-        get     i
-        get     self
-        oget    table
-        get     hv
-        aget
-        alen
-        lt
-        ifn     end_242
-        get     key
-        get     self
-        oget    table
-        get     hv
-        aget
-        get     i
-        aget
-        push    0
-        aget
-        eq
-        ifn     else_220
-        get     self
-        oget    table
-        get     hv
-        aget
-        get     i
-        aget
-        push    1
-        aget
-        ret
-        jump    end_220
-@else_220
-@end_220
-        get     i
-        push    1
-        add
-        set     i
-        jump    for_242
-@end_242
-        push    None
-        ret
-        ret
-
-@_Map_put
-        set     value
-        set     key
-        get     key
-        get     self
-        ocall   map_hash
-        set     hv
-        get     self
-        oget    table
-        get     hv
-        aget
-        ifn     else_167
-        push    0
-        set     i
-@for_158
-        get     i
-        get     self
-        oget    table
-        get     hv
-        aget
-        alen
-        lt
-        ifn     end_158
-        get     key
-        get     self
-        oget    table
-        get     hv
-        aget
-        get     i
-        aget
-        push    0
-        aget
-        eq
-        ifn     else_136
-        get     self
-        oget    table
-        get     hv
-        aget
-        get     i
-        aget
-        push    1
-        aget
-        get     value
-        rset
-        ret
-        jump    end_136
-@else_136
-@end_136
-        get     i
-        push    1
-        add
-        set     i
-        jump    for_158
-@end_158
-        get     self
-        oget    table
-        get     hv
-        aget
-        push    0
-        anew
-        get     key
-        aadd
-        get     value
-        aadd
-        ains
-        jump    end_167
-@else_167
-        get     self
-        oget    table
-        get     hv
-        aget
-        anew
-        anew
-        get     key
-        aadd
-        get     value
-        aadd
-        aadd
-        rset
-@end_167
+        ifn     else_208
+        push    'Success'
+        jump    end_208
+@else_208
+        push    'Failure'
+@end_208
+        call    print_strln
         ret
 
 @main
-        push    1023
-        clsg    Map
+        push    'dog1'
+        push    4
+        push    'Daschund'
+        clsg    Dog
         onew
-        set     map
-        push    'a'
+        set     dog1
+        push    'cat1'
+        push    1
+        push    3
+        clsg    Cat
+        onew
+        set     cat1
+        get     dog1
+        clsg    Dog
+        call    test_is
+        get     dog1
+        clsg    Animal
+        call    test_is
+        get     cat1
+        clsg    Cat
+        call    test_is
+        get     cat1
+        clsg    Animal
+        call    test_is
+        get     dog1
+        clsg    Cat
+        call    test_isnt
+        get     cat1
+        clsg    Dog
+        call    test_isnt
+        push    5
+        hash
+        call    println
+        push    7.200000
+        hash
+        call    println
+        push    'abcdef'
+        hash
+        call    println
+        anew
+        push    1
+        aadd
         push    2
-        get     map
-        ocall   put
-        push    'fish'
-        push    'kitten'
-        get     map
-        ocall   put
-        push    'a'
-        get     map
-        ocall   get
+        aadd
+        push    3
+        aadd
+        push    4
+        aadd
+        push    5
+        aadd
+        push    6
+        aadd
+        hash
         call    println
-        push    'fish'
-        get     map
-        ocall   get
+        anew
+        push    1
+        aadd
+        push    2
+        aadd
+        push    3
+        aadd
+        push    4
+        aadd
+        push    5
+        aadd
+        hash
         call    println
-        push    'a'
-        get     map
-        ocall   get
+        anew
+        push    1
+        aadd
+        push    2
+        aadd
+        push    3
+        aadd
+        push    4
+        aadd
+        hash
+        call    println
+        anew
+        push    1
+        aadd
+        push    2
+        aadd
+        push    3
+        aadd
+        hash
+        call    println
+        anew
+        push    1
+        aadd
+        push    2
+        aadd
+        hash
+        call    println
+        anew
+        push    1
+        aadd
+        hash
+        call    println
+        anew
+        hash
         call    println
         push    1
         exit

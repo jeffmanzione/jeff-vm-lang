@@ -20,7 +20,7 @@ char *INSTRUCTIONS[] = { "nop", "exit", "push", "pushm", "pop", "flip", "set",
     "lt", "lte", "gt", "gte", "if", "ifn", "ifeq", "toi", "tof", "anew", "aadd",
     "aget", "aset", "aenq", "adeq", "apush", "apop", "ains", "arem", "alen",
     "alsh", "arsh", "ccall", "onew", "ocall", "scall", "oret", "oget", "clsg",
-    "rset", "dref", "swap", "hash" };
+    "rset", "dref", "swap", "hash", "isi", "isf", "isc", "iso", "isa" };
 
 void execute_exit(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
@@ -223,6 +223,11 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
     case (TOI):
     case (TOF):
     case (HASH):
+    case (ISI):
+    case (ISF):
+    case (ISC):
+    case (ISO):
+    case (ISA):
       execute_unary(ins, ins_mem, context, stack);
       break;
     case (DUP):
@@ -316,13 +321,33 @@ void execute_unary(const Instruction ins, InstructionMemory *ins_mem,
       push_stack(stack, val);
       break;
     case (TOI):
-      val.int_value = (int) NUM_VAL(val);
+      val.int_value = (int64_t) NUM_VAL(val);
       val.type = INTEGER;
       push_stack(stack, val);
       break;
     case (TOF):
-      val.float_value = (double) NUM_VAL(val);
+      val.float_value = (float96_t) NUM_VAL(val);
       val.type = FLOATING;
+      push_stack(stack, val);
+      break;
+    case (ISI):
+      val = (INTEGER == val.type) ? TRUE_OBJECT : NONE_OBJECT;
+      push_stack(stack, val);
+      break;
+    case (ISF):
+      val = (FLOATING == val.type) ? TRUE_OBJECT : NONE_OBJECT;
+      push_stack(stack, val);
+      break;
+    case (ISC):
+      val = (CHARACTER == val.type) ? TRUE_OBJECT : NONE_OBJECT;
+      push_stack(stack, val);
+      break;
+    case (ISO):
+      val = (COMPOSITE == val.type) ? TRUE_OBJECT : NONE_OBJECT;
+      push_stack(stack, val);
+      break;
+    case (ISA):
+      val = (ARRAY == val.type) ? TRUE_OBJECT : NONE_OBJECT;
       push_stack(stack, val);
       break;
     default:
