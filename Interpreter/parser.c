@@ -16,6 +16,7 @@
 #include "hashtable.h"
 #include "shared.h"
 #include "tokenizer.h"
+#include "instruction_table.h"
 
 void remove_if_present(Parser *parser, TokenType type) {
   Token *tok;
@@ -433,7 +434,7 @@ void parse_fun(Parser *parser, FILE *out) {
   parse_body(parser, out);
 
   if (0 == strcmp(MAIN_FUNCTION, def_name.text)) {
-    write_ins_value(PUSH, 1, out);
+    write_ins_value(PUSH, 0, out);
     write_ins_default(EXIT, out);
   } else {
     write_ins_default(RET, out);
@@ -530,22 +531,47 @@ void parse_exp_for(Parser *parser, FILE *out) {
 
 //write_ins_default(OPEN, out);
 
-  FILE *cond, *aft;
+  FILE *cond, *aft, *body_head;
   void parse_for_args() {
     cond = tmpfile();
     aft = tmpfile();
+    body_head = tmpfile();
 
-    parse_exp_for(parser, out);
+    Token var_name = *((Token *) queue_peek(parser->tok_q));
+    if (nextTwoAreAndRemove(parser, WORD, COLON)) {
+      parse_exp_for(parser, out);
 
-    if (!nextIsAndRemove(parser, COMMA)) {
-      EXIT_WITH_MSG("Missing first ',' in for initializer.");
+      write_ins_id_num(SET, "arr_tmp", num, parser, out);
+      write_ins_value(PUSH, 0, out);
+
+      write_ins_default(DUP, cond);
+      write_ins_id_num(GET, "arr_tmp", num, parser, cond);
+      write_ins_default(ALEN, cond);
+      write_ins_default(LT, cond);
+
+      write_ins_default(DUP, body_head);
+      write_ins_id_num(GET, "arr_tmp", num, parser, body_head);
+      write_ins_default(FLIP, body_head);
+      write_ins_default(AGET, body_head);
+      write_ins_id(SET, var_name.text, body_head);
+
+      write_ins_value(PUSH, 1, aft);
+      write_ins_default(ADD, aft);
+
+    } else {
+
+      parse_exp_for(parser, out);
+
+      if (!nextIsAndRemove(parser, COMMA)) {
+        EXIT_WITH_MSG("Missing first ',' in for initializer.");
+      }
+      parse_exp_for(parser, cond);
+
+      if (!nextIsAndRemove(parser, COMMA)) {
+        EXIT_WITH_MSG("Missing second ',' comma in for initializer.");
+      }
+      parse_exp_for(parser, aft);
     }
-    parse_exp_for(parser, cond);
-
-    if (!nextIsAndRemove(parser, COMMA)) {
-      EXIT_WITH_MSG("Missing second ',' comma in for initializer.");
-    }
-    parse_exp_for(parser, aft);
   }
 
   if (nextIsAndRemove(parser, LPAREN)) {
@@ -564,6 +590,9 @@ void parse_exp_for(Parser *parser, FILE *out) {
   fclose(cond);
 
   write_ins_id_num(IFN, "end", num, parser, out);
+
+  append(out, body_head);
+  fclose(body_head);
 
   remove_if_present(parser, ENDLINE);
 
@@ -1186,12 +1215,12 @@ void parse_exp_unary(Parser *parser, FILE *out) {
     }
   }
 
-  //parse_exp_subscript(parser, out);
+//parse_exp_subscript(parser, out);
 }
 
 void parse_exp_subscript(Parser *parser, FILE *out) {
 
-  // Array subscripting
+// Array subscripting
   while (nextIsAndRemove(parser, LBRAC)) {
     parse_exp(parser, out);
 
@@ -1398,54 +1427,55 @@ void parse_exp_num_or_id(Parser *parser, FILE *out) {
 }
 
 void write_ins_default(Op op, FILE *out) {
-  fprintf(out, "%*c%s\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op]);
+  fprintf(out, "%*c%s\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS(op));
   fflush(out);
 }
 
 void write_ins_value(Op op, int64_t val, FILE *out) {
-  fprintf(out, "%*c%s%*c%"PRId64"\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
-  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', val);
+  fprintf(out, "%*c%s%*c%"PRId64"\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS(op),
+  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS(op)), ' ', val);
   fflush(out);
 }
 
 void write_ins_none(FILE *out) {
-  fprintf(out, "%*c%s%*c%s\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[PUSH],
-  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[PUSH]), ' ', "None");
+  fprintf(out, "%*c%s%*c%s\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS(PUSH),
+  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS(PUSH)), ' ', "None");
   fflush(out);
 }
 
 void write_ins_value_float(Op op, float96_t val, FILE *out) {
-  fprintf(out, "%*c%s%*c%f\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
-  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', (double) val);
+  fprintf(out, "%*c%s%*c%f\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS(op),
+  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS(op)), ' ',
+      (double) val);
   fflush(out);
 }
 
 void write_ins_value_str(Op op, char string[], FILE *out) {
-  fprintf(out, "%*c%s%*c%s\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
-  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', string);
+  fprintf(out, "%*c%s%*c%s\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS(op),
+  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS(op)), ' ', string);
   fflush(out);
 }
 
 void write_ins_address(Op op, int adr, FILE *out) {
-  fprintf(out, "%*c%s%*c%d\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
-  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', adr);
+  fprintf(out, "%*c%s%*c%d\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS(op),
+  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS(op)), ' ', adr);
   fflush(out);
 }
 
 void write_ins_id(Op op, char id[], FILE *out) {
-  fprintf(out, "%*c%s%*c%s\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
-  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', id);
+  fprintf(out, "%*c%s%*c%s\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS(op),
+  SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS(op)), ' ', id);
   fflush(out);
 }
 
 void write_ins_id_num(Op op, char id[], int num, Parser *parser, FILE *out) {
   if (NULL == parser->in_name) {
-    fprintf(out, "%*c%s%*c%s_%d\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
-    SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', id,
+    fprintf(out, "%*c%s%*c%s_%d\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS(op),
+    SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS(op)), ' ', id,
         num);
   } else {
-    fprintf(out, "%*c%s%*c%s_%s_%d\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS[op],
-    SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS[op]), ' ', id,
+    fprintf(out, "%*c%s%*c%s_%s_%d\n", FIRST_COL_INDEX, ' ', INSTRUCTIONS(op),
+    SECOND_COL_INDEX - FIRST_COL_INDEX - strlen(INSTRUCTIONS(op)), ' ', id,
         parser->in_name, num);
   }
   fflush(out);

@@ -10,8 +10,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "class.h"
 #include "context.h"
+#include "hashtable.h"
 #include "instruction.h"
+#include "instruction_table.h"
 #include "parser.h"
 #include "program.h"
 #include "queue.h"
@@ -27,6 +30,8 @@ void load_program(const char in_name[], const char tmp_name[],
   FILE *file;
 
   context = context_open(NULL);
+
+  it_init();
 
   file = fopen(in_name, "r");
 
@@ -56,6 +61,7 @@ void load_program(const char in_name[], const char tmp_name[],
 
   context_close(context);
 
+  it_finalize();
   instructions_finalize(&i_mem);
   stack_finalize(&stack);
   class_finalize();
@@ -67,17 +73,7 @@ void handle_bytecode(InstructionMemory *i_mem, FILE *file,
   load_bytecode(file, i_mem);
 }
 
-FILE *tmp;
-InstructionMemory *glob_i_mem;
 
-void write_classes_to_bin(const char id[], Object *comp_obj) {
-  char cls_start = '#';
-  fwrite(&cls_start, 1, 1, tmp);
-  // Save class if not Class class.
-  if (class_class != comp_obj->comp) {
-    composite_class_save_bin(tmp, comp_obj->comp, glob_i_mem);
-  }
-}
 
 //void write_classes_to_bin_and_del(void *comp_obj) {
 //  write_classes_to_bin("", (Object *) comp_obj);
@@ -94,10 +90,15 @@ void handle_inscode(InstructionMemory *i_mem, FILE *file, const char out_name[])
   file = fopen(out_name, "wb");
   NULL_CHECK(file, "Could not open file!")
 
-  tmp = file;
-  glob_i_mem = i_mem;
+  void write_classes_to_bin(const char id[], Object *comp_obj) {
+    char cls_start = '#';
+    fwrite(&cls_start, 1, 1, file);
+    // Save class if not Class class.
+    if (class_class != comp_obj->comp) {
+      composite_class_save_bin(file, comp_obj->comp, i_mem);
+    }
+  }
 
-  // TODO maybe shouldn't delete this here...
   hashtable_iterate(i_mem->classes_ht, write_classes_to_bin);
 
   fwrite(&zero, 1, 1, file);

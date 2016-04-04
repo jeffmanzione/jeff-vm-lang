@@ -7,20 +7,21 @@
 
 #include "instruction.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "array.h"
 #include "class.h"
-#include "hashtable.h"
 
-char *INSTRUCTIONS[] = { "nop", "exit", "push", "pushm", "pop", "flip", "set",
-    "get", "is", "open", "close", "jump", "call", "ret", "print", "dup", "not",
-    "add", "sub", "mult", "div", "mod", "printn", "and", "or", "xor", "eq",
-    "lt", "lte", "gt", "gte", "if", "ifn", "ifeq", "toi", "tof", "anew", "aadd",
-    "aget", "aset", "aenq", "adeq", "apush", "apop", "ains", "arem", "alen",
-    "alsh", "arsh", "ccall", "onew", "ocall", "scall", "oret", "oget", "clsg",
-    "rset", "dref", "swap", "hash", "isi", "isf", "isc", "iso", "isa" };
+
+//char *INSTRUCTIONS[] = { "nop", "exit", "push", "pushm", "pop", "flip", "set",
+//    "get", "is", "open", "close", "jump", "call", "ret", "print", "dup", "not",
+//    "add", "sub", "mult", "div", "mod", "printn", "and", "or", "xor", "eq",
+//    "lt", "lte", "gt", "gte", "if", "ifn", "ifeq", "toi", "tof", "anew", "aadd",
+//    "aget", "aset", "aenq", "adeq", "apush", "apop", "ains", "arem", "alen",
+//    "alsh", "arsh", "ccall", "onew", "ocall", "scall", "oret", "oget", "clsg",
+//    "rset", "dref", "swap", "hash", "isi", "isf", "isc", "iso", "isa" };
 
 void execute_exit(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
@@ -134,8 +135,8 @@ Object instructions_get_class_object_by_name(InstructionMemory *instructs,
 
 int execute(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  //printf(">>> %s(%d)\n", INSTRUCTIONS[ins.op], stack->sp);
-  //fflush(stdout);
+//  printf(">>> %s(%d)\n", INSTRUCTIONS(ins.op), stack->sp);
+//  fflush(stdout);
   Object val, tmp;
   Object first, second;
 //char *str;
@@ -294,7 +295,7 @@ void execute_exit(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
   Object val = deref(pop_stack(stack));
 
-  printf("Exit status: %d\n", val.int_value);
+  printf("Exit status: %"PRId64"\n", val.int_value);
   fflush(stdout);
 }
 

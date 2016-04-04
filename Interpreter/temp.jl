@@ -60,8 +60,8 @@ class Test {
 
 def main {
     methods = flatten([Doge.methods, Doge.super.methods])
-    for i=0, i<|methods|, i=i+1
-        println(methods[i])
+    for method : methods
+        println(method)
     
     owner1 = Owner.new('owner1')
     
@@ -90,8 +90,8 @@ def main {
     println(test1.get_map())
     test1.get_map()[1][0].speak()
     
-    for i=0, i < |owner1.pets|, i=i+1
-        owner1.pets[i].speak()
+    for pet : owner1.pets
+        pet.speak()
     
 }
 

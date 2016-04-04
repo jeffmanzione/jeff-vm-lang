@@ -24,12 +24,13 @@ typedef struct _Instruction Instruction;
 
 #define WHICH_MEMBER           "_which_"
 
+
 #define NUM_VAL(obj) ((INTEGER == obj.type)   ? obj.int_value : \
                      ((FLOATING == obj.type)  ? obj.float_value : \
                      ((CHARACTER == obj.type) ? obj.char_value : \
-                     ((ARRAY == obj.type)     ? (int64_t) obj.array : \
-                     ((COMPOSITE == obj.type) ? (int64_t) obj.comp : \
-                     0)))))
+                     ((ARRAY == obj.type)     ? (int64_t) (int) obj.array : \
+                     ((COMPOSITE == obj.type) ? (int64_t) (int) obj.comp : \
+                     0LL)))))
 
 #define BIN_A(op, new, n_suffix, first, second) \
     new.n_suffix = NUM_VAL(first) op NUM_VAL(second);
@@ -143,8 +144,6 @@ typedef enum {
   ISA,
 } Op;
 
-extern char *INSTRUCTIONS[];
-
 typedef struct _Instruction {
   Op   op;
   Type type;
@@ -165,6 +164,11 @@ typedef struct {
   Hashtable   *classes_ht;
   size_t       num_classes, class_array_capacity;
 } InstructionMemory;
+
+#include "instruction_table.h"
+//typedef struct _InstructionTable InstructionTable;
+extern InstructionTable global_it;
+#define INSTRUCTIONS(x) global_it.instruction_ids[x].id
 
 int execute(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);

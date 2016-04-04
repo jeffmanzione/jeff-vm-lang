@@ -158,15 +158,20 @@ static void wide(ArrayList* const list) {
 }
 
 void array_list_insert(ArrayList * const list, int index, Object e) {
-//  printf("array_insert(list,%d,%d)\n", index, e.int_value);
+//  printf("array_insert(list,%d,%d)\n", index, (int) e.int_value);
 //  printf("\tlist->current = %d\n", list->current);
 //  printf("\tlist->size = %d\n", list->size);
-  if (index <= list->current && ++list->current < list->size) {
-    shift(list, index, 1, RIFHT);
-  } else {
+
+  if (index >= list->size) {
     ensure_capacity(list, index);
-    list->current = index;
+    list->current = index - 1;
   }
+
+  list->current++;
+  if (index < list->current) {
+    shift(list, index, 1, RIFHT);
+  }
+
   list->Objects[index] = e;
 
 //  printf("\tlist->current = %d\n", list->current);
