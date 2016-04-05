@@ -8,19 +8,37 @@
 #include "parser.h"
 
 #include <inttypes.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "class.h"
 #include "context.h"
-#include "hashtable.h"
-#include "shared.h"
-#include "tokenizer.h"
-#include "instruction_table.h"
+
+#define PARSER_CHECK(exp, tok, msg) {if (exp) {parser_exit(parser, tok, msg);}}
+#define PARSER_NULL_CHECK(exp, tok, msg) {if (NULL == exp) {parser_exit(parser, tok, msg);}}
+
+void parser_exit(Parser *parser, Token *tok, const char msg[]) {
+  printf("Parsing Error in file '%s' at line %d, col %d:\n",
+      parser->fi_in->name, tok->line, tok->col);
+  if (tok->line >= 3) {
+    printf("line %*d: %s", 5, tok->line - 2,
+        file_info_lookup(parser->fi_in, tok->line - 2)->line_text);
+  }
+  if (tok->line >= 2) {
+    printf("line %*d: %s", 5, tok->line - 1,
+        file_info_lookup(parser->fi_in, tok->line - 1)->line_text);
+  }
+  printf("line %*d: %s", 5, tok->line,
+      file_info_lookup(parser->fi_in, tok->line)->line_text);
+  printf("See %.*s%.*s\n", 7 + tok->col, DASH_STRING, max(strlen(tok->text), 1),
+  CARET_STRING);
+  printf("Error message: %s\n", msg);
+  exit(-1);
+}
 
 void remove_if_present(Parser *parser, TokenType type) {
   Token *tok;
-  NULL_CHECK(parser->tok_q, "Queue was NULL!");
+  NULL_CHECK(parser->tok_q, "Unexpected EOF!");
   if (0 == parser->tok_q->size) {
     return;
   }
@@ -34,7 +52,7 @@ void remove_if_present(Parser *parser, TokenType type) {
 
 int nextIsWordAndRemove(Parser *parser, char word[]) {
   Token *tok;
-  NULL_CHECK(parser->tok_q, "Queue was NULL!");
+  NULL_CHECK(parser->tok_q, "Unexpected EOF!");
   if (1 > parser->tok_q->size) {
     return FALSE;
   }
@@ -52,7 +70,7 @@ int nextIsWordAndRemove(Parser *parser, char word[]) {
 
 int nextIsAndRemove(Parser *parser, TokenType type) {
   Token *tok;
-  NULL_CHECK(parser->tok_q, "Queue was NULL!");
+  NULL_CHECK(parser->tok_q, "Unexpected EOF!");
   if (1 > parser->tok_q->size) {
     return FALSE;
   }
@@ -69,7 +87,7 @@ int nextIsAndRemove(Parser *parser, TokenType type) {
 
 int nextTwoAreAndRemove(Parser *parser, TokenType first, TokenType second) {
   Token *tok_1, *tok_2;
-  NULL_CHECK(parser->tok_q, "Queue was NULL!");
+  NULL_CHECK(parser->tok_q, "Unexpected EOF!");
   if (2 > parser->tok_q->size) {
     return FALSE;
   }
@@ -97,7 +115,7 @@ int nextTwoAreAndRemove(Parser *parser, TokenType first, TokenType second) {
 int nextThreeAreAndRemove(Parser *parser, TokenType first, TokenType second,
     TokenType third) {
   Token *tok_1, *tok_2, *tok_3;
-  NULL_CHECK(parser->tok_q, "Queue was NULL!");
+  NULL_CHECK(parser->tok_q, "Unexpected EOF!");
   if (3 > parser->tok_q->size) {
     return FALSE;
   }
@@ -134,7 +152,7 @@ int nextThreeAreAndRemove(Parser *parser, TokenType first, TokenType second,
 int nextIsAndSecondIsntAndRemove(Parser *parser, TokenType first,
     TokenType notSecond) {
   Token *tok_1, *tok_2;
-  NULL_CHECK(parser->tok_q, "Queue was NULL!");
+  NULL_CHECK(parser->tok_q, "Unexpected EOF!");
   if (1 > parser->tok_q->size) {
     return FALSE;
   }
@@ -180,21 +198,22 @@ Parser *glob_parser;
 void write_classes_and_del(void *comp_obj) {
   composite_class_save_src(glob_parser->top, ((Object *) comp_obj)->comp);
   fprintf(glob_parser->top, "\n");
-  // TODO
-  //object_delete(comp_obj);
+// TODO
+//object_delete(comp_obj);
 }
 
-void parse(Queue *queue, FILE *out) {
-  // printf("parse()\n"); fflush(stdout);
+void parse(FileInfo *fi, Queue *queue, FILE *out) {
+// printf("parse()\n"); fflush(stdout);
   Parser parser;
   parser.tok_q = queue;
   parser.top = out;
   parser.fun_names = hashtable_create(TABLE_SZ);
   parser.classes = hashtable_create(TABLE_SZ);
+  parser.fi_in = fi;
   parser.in_name = NULL;
 
   FILE *tmp = tmpfile();
-  //FILE *tmp = out;
+//FILE *tmp = out;
 
   queue_init(&parser.classes_queue);
 
@@ -210,7 +229,7 @@ void parse(Queue *queue, FILE *out) {
 }
 
 void parse_top_level(Parser *parser, FILE *out) {
-  // printf("parse_top_level()\n"); fflush(stdout);
+// printf("parse_top_level()\n"); fflush(stdout);
 
   while (0 < parser->tok_q->size) {
     remove_if_present(parser, ENDLINE);
@@ -235,33 +254,32 @@ void parse_elements(Parser *parser, FILE *out) {
     char fn[MAX_LINE_LEN];
     Token fn_token = *((Token *) queue_peek(parser->tok_q));
     Queue child_queue;
-    FILE *child_file;
     fn[0] = '\0';
-    CHECK(!nextIsAndRemove(parser, STR),
+    PARSER_CHECK(!nextIsAndRemove(parser, STR), &fn_token,
         "Expected string after keyword "IMPORT_KEYWORD".")
 
     strncpy(fn, fn_token.text + 1, strlen(fn_token.text) - 2);
     fn[strlen(fn_token.text) - 2] = '\0';
-    child_file = fopen(fn, "r");
-    NULL_CHECK(child_file, "Could not find imported source!")
-    //printf("Import file >%s<\n", fn);
-    //fflush(stdout);
+
+    FileInfo child_fi = file_info(fn);
 
     queue_init(&child_queue);
 
-    tokenize(child_file, &child_queue);
+    tokenize(&child_fi, &child_queue);
 
     Parser child_parser = *parser;
     child_parser.tok_q = &child_queue;
+    child_parser.fi_in = &child_fi;
     strcrepl(fn, '/', '_');
     fn[strlen(fn_token.text) - 5] = '\0';
     child_parser.in_name = fn;
     parse_top_level(&child_parser, out);
-    fclose(child_file);
+    file_info_finalize(child_fi);
   } else {
-    printf("WAS %d\nLine %d(%d)\n", tok->type, tok->line, tok->col);
-    fflush(stdout);
-    EXIT_WITH_MSG("Expected "DEF_KEYWORD" or "CLASS_KEYWORD".")
+    //printf("WAS %d\nLine %d(%d)\n", tok->type, tok->line, tok->col);
+    //fflush(stdout);
+    //parser_exit(parser, tok, "Expected "DEF_KEYWORD" or "CLASS_KEYWORD".");
+    parser_exit(parser, tok, "Expected "DEF_KEYWORD" or "CLASS_KEYWORD".");
   }
 }
 
@@ -272,18 +290,20 @@ void parse_class(Parser *parser, FILE *out) {
 
   class_name = *((Token *) queue_peek(parser->tok_q));
 
-  CHECK(!nextIsAndRemove(parser, WORD), "Expected class name.");
+  PARSER_CHECK(!nextIsAndRemove(parser, WORD), &class_name,
+      "Expected class name.");
 
   Class *super;
 
   if (nextIsAndRemove(parser, COLON)) {
     Token super_class_name = *((Token *) queue_peek(parser->tok_q));
-    CHECK(!nextIsAndRemove(parser, WORD),
+    PARSER_CHECK(!nextIsAndRemove(parser, WORD), &super_class_name,
         "Expected super class name after colon in class declaration.");
     Object *super_obj = hashtable_lookup(parser->classes,
         super_class_name.text);
 
-    NULL_CHECK(super_obj, "Could not find class with name.")
+    PARSER_NULL_CHECK(super_obj, &super_class_name,
+        "Could not find class with name.")
     super = super_obj->comp;
   } else {
     super = class_class;
@@ -295,7 +315,7 @@ void parse_class(Parser *parser, FILE *out) {
   class_obj->comp = class;
 
   parse_class_body(parser, out, class, class_name.text);
-  //composite_class_print_sumary(class);
+//composite_class_print_sumary(class);
   hashtable_insert(parser->classes, class_name.text, class_obj);
   queue_add(&parser->classes_queue, class_obj);
 }
@@ -317,7 +337,8 @@ void parse_class_body(Parser *parser, FILE *out, Composite *class,
   }
 
   remove_if_present(parser, ENDLINE);
-  CHECK(!nextIsAndRemove(parser, RBRCE), "Expected }");
+  PARSER_CHECK(!nextIsAndRemove(parser, RBRCE), queue_peek(parser->tok_q),
+      "Expected }");
 }
 
 void parse_class_item(Parser *parser, FILE *out, Composite *class,
@@ -329,9 +350,11 @@ void parse_class_item(Parser *parser, FILE *out, Composite *class,
       || nextIsWordAndRemove(parser, FUN_KEYWORD)) {
     parse_class_method(parser, out, class, class_name);
   } else {
-    printf("WAS %d\nLine %d(%d)\n", tok->type, tok->line, tok->col);
-    fflush(stdout);
-    EXIT_WITH_MSG("Expected "DEF_KEYWORD" or "FIELD_KEYWORD".")
+    //printf("WAS %d\nLine %d(%d)\n", tok->type, tok->line, tok->col);
+    //fflush(stdout);
+    //parser_exit(parser, tok, "Expected "DEF_KEYWORD" or "FIELD_KEYWORD".");
+    parser_exit(parser, tok, "Expected "DEF_KEYWORD" or "FIELD_KEYWORD".");
+
   }
 }
 
@@ -356,7 +379,8 @@ void parse_class_method(Parser *parser, FILE *out, Composite *class,
   char label[ID_SZ];
   label[0] = '\0';
 
-  CHECK(!nextIsAndRemove(parser, WORD), "Expected fun name.");
+  PARSER_CHECK(!nextIsAndRemove(parser, WORD), queue_peek(parser->tok_q),
+      "Expected fun name.");
 
   remove_if_present(parser, ENDLINE);
 
@@ -375,14 +399,14 @@ void parse_class_method(Parser *parser, FILE *out, Composite *class,
     remove_if_present(parser, ENDLINE);
 
     // TODO
-    CHECK(!nextIsAndRemove(parser, LPAREN),
+    PARSER_CHECK(!nextIsAndRemove(parser, LPAREN), queue_peek(parser->tok_q),
         "Expected ( after : in super constructor!")
 
     if (!nextIsAndRemove(parser, RPAREN)) {
       parse_exp_tuple(parser, out);
     }
 
-    CHECK(!nextIsAndRemove(parser, RPAREN),
+    PARSER_CHECK(!nextIsAndRemove(parser, RPAREN), queue_peek(parser->tok_q),
         "Expected ) to end super constructor!")
 
     write_ins_id(GET, "self", out);
@@ -410,7 +434,7 @@ void parse_fun(Parser *parser, FILE *out) {
 
   def_name = *((Token *) queue_peek(parser->tok_q));
 
-  CHECK(!nextIsAndRemove(parser, WORD), "Expected fun name.");
+  PARSER_CHECK(!nextIsAndRemove(parser, WORD), &def_name, "Expected fun name.");
 
   hashtable_insert(parser->fun_names, def_name.text, (Object *) sizeof(Object));
 
@@ -451,7 +475,8 @@ int parse_fun_arguments_helper(Parser *parser, FILE *out) {
     return 0;
   }
 //printf("ARG NAME = %s\n", tok->text);
-  CHECK(!nextIsAndRemove(parser, WORD), "Expected arg name.");
+  PARSER_CHECK(!nextIsAndRemove(parser, WORD), queue_peek(parser->tok_q),
+      "Expected arg name.");
 
   if (nextIsAndRemove(parser, COMMA)) {
     num_args = 1 + parse_fun_arguments_helper(parser, out);
@@ -470,7 +495,8 @@ int parse_fun_arguments(Parser *parser, FILE *out) {
   }
 
   num_args = parse_fun_arguments_helper(parser, out);
-  CHECK(!nextIsAndRemove(parser, RPAREN), "Expected )");
+  PARSER_CHECK(!nextIsAndRemove(parser, RPAREN), queue_peek(parser->tok_q),
+      "Expected )");
   return num_args;
 }
 
@@ -490,7 +516,8 @@ void parse_body(Parser *parser, FILE *out) {
   }
 
   remove_if_present(parser, ENDLINE);
-  CHECK(!nextIsAndRemove(parser, RBRCE), "Expected }");
+  PARSER_CHECK(!nextIsAndRemove(parser, RBRCE), queue_peek(parser->tok_q),
+      "Expected }");
 }
 
 void parse_line(Parser *parser, FILE *out) {
@@ -501,7 +528,7 @@ void parse_line(Parser *parser, FILE *out) {
   remove_if_present(parser, ENDLINE);
 
 //else if (RBRCE != tok->type) {
-//  EXIT_WITH_MSG("Expected ENDLINE or } at end of line.");
+//  parser_exit(parser, tok, "Expected ENDLINE or } at end of line.");;
 //}
 }
 
@@ -563,12 +590,16 @@ void parse_exp_for(Parser *parser, FILE *out) {
       parse_exp_for(parser, out);
 
       if (!nextIsAndRemove(parser, COMMA)) {
-        EXIT_WITH_MSG("Missing first ',' in for initializer.");
+        parser_exit(parser, queue_peek(parser->tok_q),
+            "Missing first ',' in for initializer.");
+        ;
       }
       parse_exp_for(parser, cond);
 
       if (!nextIsAndRemove(parser, COMMA)) {
-        EXIT_WITH_MSG("Missing second ',' comma in for initializer.");
+        parser_exit(parser, queue_peek(parser->tok_q),
+            "Missing second ',' comma in for initializer.");
+        ;
       }
       parse_exp_for(parser, aft);
     }
@@ -578,7 +609,9 @@ void parse_exp_for(Parser *parser, FILE *out) {
     parse_for_args();
 
     if (!nextIsAndRemove(parser, RPAREN)) {
-      EXIT_WITH_MSG("Expected ')' after for initializer.");
+      parser_exit(parser, queue_peek(parser->tok_q),
+          "Expected ')' after for initializer.");
+      ;
     }
   } else {
     parse_for_args();
@@ -691,7 +724,7 @@ void parse_exp_if(Parser *parser, FILE *out) {
 ////
 ////        parse_exp(parser, out);
 ////
-////        CHECK(!nextIsAndRemove(parser, RBRAC), "Expected ].");
+////        PARSER_CHECK(!nextIsAndRemove(parser, RBRAC), "Expected ].");
 ////
 ////        if (!nextIsAndSecondIsntAndRemove(parser, EQUALS, EQUALS)) {
 ////          write_ins_default(AGET, out);
@@ -745,7 +778,8 @@ void parse_exp_assign_multi_lhs(Parser *parser, FILE *out) {
     if (nextIsAndRemove(parser, COMMA)) {
       parse_exp_assign_multi_lhs(parser, out);
     } else {
-      CHECK(!nextIsAndRemove(parser, RBRCE), "Expected } to close LHS assign")
+      PARSER_CHECK(!nextIsAndRemove(parser, RBRCE), queue_peek(parser->tok_q),
+          "Expected } to close LHS assign")
     }
   }
 
@@ -760,7 +794,8 @@ void parse_exp_assign(Parser *parser, FILE *out) {
 
     parse_exp_assign_multi_lhs(parser, hold);
 
-    CHECK(!nextIsAndRemove(parser, EQUALS), "Expected = after LHS assign")
+    PARSER_CHECK(!nextIsAndRemove(parser, EQUALS), queue_peek(parser->tok_q),
+        "Expected = after LHS assign")
 
     parse_exp_assign(parser, out);
 
@@ -813,7 +848,8 @@ void parse_exp_assign_array(Parser *parser, FILE *out) {
     append(out, hold);
 
     parse_exp_or(parser, out);
-    CHECK(!nextIsAndRemove(parser, COLON), "Expected : after array in <- exp.")
+    PARSER_CHECK(!nextIsAndRemove(parser, COLON), queue_peek(parser->tok_q),
+        "Expected : after array in <- exp.")
     parse_exp(parser, out);
 
     write_ins_default(AREM, out);
@@ -829,7 +865,8 @@ void parse_exp_assign_array(Parser *parser, FILE *out) {
   } else if (nextIsAndRemove(parser, RARROW)) {
     parse_exp_or(parser, out);
 
-    CHECK(!nextIsAndRemove(parser, COLON), "Expected : after array in -> exp.")
+    PARSER_CHECK(!nextIsAndRemove(parser, COLON), queue_peek(parser->tok_q),
+        "Expected : after array in -> exp.")
     parse_exp(parser, out);
 
     append(out, hold);
@@ -845,7 +882,8 @@ void parse_exp_assign_array(Parser *parser, FILE *out) {
   } else if (nextThreeAreAndRemove(parser, COLON, EQUALS, GTHAN)) {
     append(out, hold);
     Token var_name = *((Token *) queue_peek(parser->tok_q));
-    CHECK(!nextIsAndRemove(parser, WORD), "Expected var name after :=>")
+    PARSER_CHECK(!nextIsAndRemove(parser, WORD), &var_name,
+        "Expected var name after :=>")
     write_ins_default(ADEQ, out);
     write_ins_id(SET, var_name.text, out);
 
@@ -870,8 +908,9 @@ void parse_exp_assign_array(Parser *parser, FILE *out) {
       write_ins_default(ASET, out);
 
     } else {
-      printf("Was %d\n", ((Token *) queue_peek(parser->tok_q))->line);
-      EXIT_WITH_MSG("Expected ->, <-, or = after a:x expression")
+      //printf("Was %d\n", ((Token *) queue_peek(parser->tok_q))->line);
+      parser_exit(parser, queue_peek(parser->tok_q),
+          "Expected ->, <-, or = after a:x expression");
     }
 
   } else {
@@ -1080,7 +1119,8 @@ void parse_exp_array_transfer(Parser *parser, FILE *out) {
     if (nextThreeAreAndRemove(parser, LTHAN, LTHAN, COLON)) {
       tok_2 = *((Token *) queue_peek(parser->tok_q));
 
-      CHECK(!nextIsAndRemove(parser, WORD), "Shift must be used with arrays.")
+      PARSER_CHECK(!nextIsAndRemove(parser, WORD), queue_peek(parser->tok_q),
+          "Shift must be used with arrays.")
 
       write_ins_id(GET, tok_1.text, out);
       write_ins_id(GET, tok_2.text, out);
@@ -1089,7 +1129,8 @@ void parse_exp_array_transfer(Parser *parser, FILE *out) {
     } else if (nextThreeAreAndRemove(parser, COLON, GTHAN, GTHAN)) {
       tok_2 = *((Token *) queue_peek(parser->tok_q));
 
-      CHECK(!nextIsAndRemove(parser, WORD), "Shift must be used with arrays.")
+      PARSER_CHECK(!nextIsAndRemove(parser, WORD), queue_peek(parser->tok_q),
+          "Shift must be used with arrays.")
 
       write_ins_id(GET, tok_1.text, out);
       write_ins_id(GET, tok_2.text, out);
@@ -1120,14 +1161,16 @@ void parse_exp_casting(Parser *parser, FILE *out) {
 
   tok = *((Token *) queue_peek(parser->tok_q));
 
-  CHECK(!nextIsAndRemove(parser, WORD), "Expect type to cast.")
+  PARSER_CHECK(!nextIsAndRemove(parser, WORD), queue_peek(parser->tok_q),
+      "Expect type to cast.")
 
   if (MATCHES(TYPE_INT_KEYWORD, tok.text)) {
     write_ins_default(TOI, out);
   } else if (MATCHES(TYPE_FLOAT_KEYWORD, tok.text)) {
     write_ins_default(TOF, out);
   } else {
-    EXIT_WITH_MSG("Expect type to cast. (2)");
+    parser_exit(parser, &tok, "Expect type to cast. (2)");
+    ;
   }
 
 }
@@ -1205,7 +1248,8 @@ void parse_exp_unary(Parser *parser, FILE *out) {
       } else if (nextIsAndRemove(parser, LBRAC)) {
         parse_exp(parser, out);
 
-        CHECK(!nextIsAndRemove(parser, RBRAC), "Expected ].");
+        PARSER_CHECK(!nextIsAndRemove(parser, RBRAC), queue_peek(parser->tok_q),
+            "Expected ].");
 
         write_ins_default(AGET, out);
 
@@ -1224,7 +1268,8 @@ void parse_exp_subscript(Parser *parser, FILE *out) {
   while (nextIsAndRemove(parser, LBRAC)) {
     parse_exp(parser, out);
 
-    CHECK(!nextIsAndRemove(parser, RBRAC), "Expected ].");
+    PARSER_CHECK(!nextIsAndRemove(parser, RBRAC), queue_peek(parser->tok_q),
+        "Expected ].");
 
     write_ins_default(AGET, out);
   }
@@ -1241,7 +1286,8 @@ void parse_exp_obj_item_helper(Parser *parser, FILE *prev_buffer,
 
   Token item = *((Token *) queue_peek(parser->tok_q));
 
-  CHECK(!nextIsAndRemove(parser, WORD), "Expected object field to be word.")
+  PARSER_CHECK(!nextIsAndRemove(parser, WORD), queue_peek(parser->tok_q),
+      "Expected object field to be word.")
 
   if (nextIsAndRemove(parser, LPAREN)) {
     Token *tok_next = queue_peek(parser->tok_q);
@@ -1249,7 +1295,8 @@ void parse_exp_obj_item_helper(Parser *parser, FILE *prev_buffer,
       parse_exp_tuple(parser, total_accum);
     }
 
-    CHECK(!nextIsAndRemove(parser, RPAREN), "Expected ). 2");
+    PARSER_CHECK(!nextIsAndRemove(parser, RPAREN), queue_peek(parser->tok_q),
+        "Expected ). 2");
 
     append(total_accum, prev_buffer);
     if (MATCHES(item.text, NEW_KEYWORD)) {
@@ -1293,11 +1340,13 @@ void parse_exp_parens(Parser *parser, FILE *out) {
   if (nextIsAndRemove(parser, LPAREN)) {
     parse_exp(parser, out);
 //printf("Was %s\n", ((Token *) queue_peek(parser->tok_q))->text);
-    CHECK(!nextIsAndRemove(parser, RPAREN), "Expected ). 1");
+    PARSER_CHECK(!nextIsAndRemove(parser, RPAREN), queue_peek(parser->tok_q),
+        "Expected ). 1");
   } else if (nextIsAndRemove(parser, PIPE)) {
     parse_exp(parser, out);
 //printf("WAS '%d' for |\n", ((Token *) queue_peek(parser->tok_q))->type);
-    CHECK(!nextIsAndRemove(parser, PIPE), "Expected | to close |x|.");
+    PARSER_CHECK(!nextIsAndRemove(parser, PIPE), queue_peek(parser->tok_q),
+        "Expected | to close |x|.");
     write_ins_default(ALEN, out);
   } else {
     parse_exp_array_dec(parser, out);
@@ -1325,7 +1374,8 @@ void parse_exp_array_dec(Parser *parser, FILE *out) {
     }
   }
 
-  CHECK(!nextIsAndRemove(parser, RBRAC), "Expected ].");
+  PARSER_CHECK(!nextIsAndRemove(parser, RBRAC), queue_peek(parser->tok_q),
+      "Expected ].");
 }
 
 void parse_exp_num_or_id(Parser *parser, FILE *out) {
@@ -1383,7 +1433,8 @@ void parse_exp_num_or_id(Parser *parser, FILE *out) {
         }
 
         //printf("WASSS '%s'\n", ((Token *)queue_peek(parser->tok_q))->text);
-        CHECK(!nextIsAndRemove(parser, RPAREN), "Expected ). 3");
+        PARSER_CHECK(!nextIsAndRemove(parser, RPAREN),
+            queue_peek(parser->tok_q), "Expected ). 3");
 
         if (MATCHES(PRINT_FUNCTION, tok->text)) {
           if (num_args > 1) {
@@ -1419,8 +1470,8 @@ void parse_exp_num_or_id(Parser *parser, FILE *out) {
     write_ins_value_str(PUSH, tok->text, out);
     queue_remove(parser->tok_q);
   } else {
-    printf("WAS %d\nLine %d(%d)\n", tok->type, tok->line, tok->col);
-    EXIT_WITH_MSG("Unexpected token. Expected word or number. 1")
+    //printf("WAS %d\nLine %d(%d)\n", tok->type, tok->line, tok->col);
+    parser_exit(parser, tok, "Unexpected token. Expected word or number. 1");
   }
 
   free(tok);

@@ -8,11 +8,17 @@
 #ifndef PARSER_H_
 #define PARSER_H_
 
+#include <stdint.h>
 #include <stdio.h>
 
-#include "class.h"
+#include "hashtable.h"
 #include "instruction.h"
 #include "queue.h"
+#include "shared.h"
+#include "tokenizer.h"
+
+#define DASH_STRING "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+#define CARET_STRING "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
 
 #define FUN_KEYWORD        "function"
 #define DEF_KEYWORD        "def"
@@ -58,11 +64,12 @@ typedef struct {
     Hashtable *fun_names;
     Hashtable *classes;
     Queue      classes_queue;
+    FileInfo  *fi_in;
     char      *in_name;
     FILE      *top;
 } Parser;
 
-void parse(Queue *, FILE *);
+void parse(FileInfo *fi, Queue *, FILE *);
 
 void parse_top_level(Parser *, FILE *);
 void parse_elements(Parser *, FILE *);

@@ -136,7 +136,7 @@ static void widen(ArrayList* const list, int sz) {
   //printf("A\n"); fflush(stdout);
   list->size = sz;
   //printf("B\n"); fflush(stdout);
-  RENEW(list->Objects, list->size, Object)
+  list->Objects = RENEW(list->Objects, list->size, Object)
   //printf("C\n"); fflush(stdout);
 //  arraryCopy(newArr, 0, list->Objects, 0, list->current, list->size,
 //      sizeof(Object));
@@ -149,7 +149,7 @@ static void widen(ArrayList* const list, int sz) {
 
 static void wide(ArrayList* const list) {
   list->size += list->increment_rate;
-  RENEW(list->Objects, list->size, Object)
+  list->Objects = RENEW(list->Objects, list->size, Object)
 //  ;
 //  arraryCopy(newArr, 0, list->Objects, 0, list->current, list->size,
 //      sizeof(Object));

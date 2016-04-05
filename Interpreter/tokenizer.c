@@ -9,6 +9,46 @@
 
 #include <string.h>
 
+LineInfo line_info(FileInfo *fi, char line_text[], int line_num) {
+  LineInfo li;
+  strncpy(li.line_text, line_text, MAX_LINE_LEN);
+  li.line_num = line_num;
+  li.parent = fi;
+  return li;
+}
+
+FileInfo file_info(const char fn[]) {
+  FileInfo fi;
+  fi.name = strdup(fn);
+  fi.fp = fopen(fn, "r");
+  NULL_CHECK(fi.fp, "Could not open file!")
+  fi.num_lines = 0;
+  fi.array_len = DEFAULT_NUM_LINES;
+  fi.lines = NEW_ARRAY(fi.lines, fi.array_len, LineInfo)
+  return fi;
+}
+
+void file_info_finalize(FileInfo fi) {
+  free(fi.name);
+  free(fi.lines);
+  fclose(fi.fp);
+}
+
+void file_info_append(FileInfo *fi, char line_text[]) {
+  fi->lines[fi->num_lines++] = line_info(fi, line_text, fi->num_lines);
+  if (fi->num_lines >= fi->array_len) {
+    fi->array_len += DEFAULT_NUM_LINES;
+    fi->lines = RENEW(fi->lines, fi->array_len, LineInfo)
+  }
+}
+
+LineInfo *file_info_lookup(FileInfo *fi, int line_num) {
+  if (line_num < 1 || line_num > fi->num_lines) {
+    return NULL;
+  }
+  return &fi->lines[line_num - 1];
+}
+
 Token *token_create(TokenType type, int line, int col, char text[]) {
   Token *tok = NEW(tok, Token)
   tok->type = type;
@@ -277,8 +317,7 @@ int read_string(const char line[], char **index, char *word) {
   return word_i;
 }
 
-void tokenize(FILE *in, Queue *queue) {
-  NULL_CHECK(in, "in was invalid for tokenize()")
+void tokenize(FileInfo *fi, Queue *queue) {
   NULL_CHECK(queue, "queue was invalid for tokenize()")
 
   char line[MAX_LINE_LEN];
@@ -288,10 +327,12 @@ void tokenize(FILE *in, Queue *queue) {
   TokenType type;
   int line_num = 0, col_num = 0, word_len = 0, chars_consumed;
   Token *tok;
-  while (NULL != fgets(line, MAX_LINE_LEN, in)) {
+  while (NULL != fgets(line, MAX_LINE_LEN, fi->fp)) {
     line_num++;
     col_num = 1;
     index = line;
+
+    file_info_append(fi, line);
 
     while (TRUE) {
       //printf("Test\n");fflush(stdout);
@@ -315,7 +356,7 @@ void tokenize(FILE *in, Queue *queue) {
       if (ENDLINE != type
           || (queue->size != 0 && ENDLINE != ((Token *) queue_last(queue))->type)) {
 
-        tok = token_create(type, line_num, col_num - chars_consumed, word);
+        tok = token_create(type, line_num, col_num - strlen(word), word);
         queue_add(queue, tok);
 
         //printf("'%s'\n", ((Token *) queue_last(queue))->text); fflush(stdout);

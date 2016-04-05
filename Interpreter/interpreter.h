@@ -11,13 +11,15 @@
 #include <stdio.h>
 
 #include "instruction.h"
+#include "tokenizer.h"
 
 void load_program(const char in_name[], const char tmp_name[],
     const char out_name[]);
 
-void handle_sourcecode(InstructionMemory *i_mem, FILE *file,
+void handle_sourcecode(InstructionMemory *i_mem, FileInfo *fi,
     const char tmp_name[], const char out_name[]);
-void handle_inscode(InstructionMemory *i_mem, FILE *file, const char out_name[]);
+void handle_inscode(InstructionMemory *i_mem, FileInfo *fi,
+    const char out_name[]);
 void handle_bytecode(InstructionMemory *i_mem, FILE *file,
     const char out_name[]);
 

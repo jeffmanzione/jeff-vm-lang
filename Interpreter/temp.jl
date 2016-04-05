@@ -1,7 +1,6 @@
 import 'lib_src/print.jl'
 import 'lib_src/array.jl'
 
-
 class Owner {
     field name, pets
     
@@ -64,12 +63,11 @@ def main {
         println(method)
     
     owner1 = Owner.new('owner1')
-    
-	doge1 = Doge.new('doge1', 'Labrador', 2)
-	doge2 = Doge.new('doge2', 'Dachshund', 5)
+	doge1  = Doge.new('doge1', 'Labrador', 2)
+	doge2  = Doge.new('doge2', 'Dachshund', 5)
 	kitty1 = Kitty.new('kitty1', 3)
-
-    tmp = owner1;
+    
+    tmp = owner1
     
     if owner1 == tmp print_strln('True')
     else print_strln('False')

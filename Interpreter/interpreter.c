@@ -33,29 +33,24 @@ void load_program(const char in_name[], const char tmp_name[],
 
   it_init();
 
-  file = fopen(in_name, "r");
-
-  //printf("sizeof(Instruction) = %d\n", sizeof(Instruction));
-  //fflush(stdout);
-
-  NULL_CHECK(file, "Could not open file!")
-
   instructions_init(&i_mem, MEM_SZ);
   stack_init(&stack, MEM_SZ);
   class_init(&i_mem);
-
+  FileInfo fi;
   if (ends_with(in_name, ".jl")) {
-    handle_sourcecode(&i_mem, file, tmp_name, out_name);
+    fi = file_info(in_name);
+    handle_sourcecode(&i_mem, &fi, tmp_name, out_name);
+    file_info_finalize(fi);
   } else if (ends_with(in_name, ".jm")) {
-    handle_inscode(&i_mem, file, out_name);
+    fi = file_info(in_name);
+    handle_inscode(&i_mem, &fi, out_name);
+    file_info_finalize(fi);
   } else {
-    fclose(file);
     file = fopen(in_name, "rb");
+    NULL_CHECK(file, "Could not open file!")
     handle_bytecode(&i_mem, file, out_name);
+    fclose(file);
   }
-
-  fclose(file);
-
   while (!execute(i_mem.ins[*(context->ip)], &i_mem, &context, &stack))
     ;
 
@@ -73,21 +68,19 @@ void handle_bytecode(InstructionMemory *i_mem, FILE *file,
   load_bytecode(file, i_mem);
 }
 
-
-
 //void write_classes_to_bin_and_del(void *comp_obj) {
 //  write_classes_to_bin("", (Object *) comp_obj);
 //  object_delete(comp_obj);
 //}
 
-void handle_inscode(InstructionMemory *i_mem, FILE *file, const char out_name[]) {
+void handle_inscode(InstructionMemory *i_mem, FileInfo *fi,
+    const char out_name[]) {
   int count;
   unsigned int zero = 0;
 
-  load_instructions(file, i_mem);
-  fclose(file);
+  load_instructions(fi->fp, i_mem);
 
-  file = fopen(out_name, "wb");
+  FILE *file = fopen(out_name, "wb");
   NULL_CHECK(file, "Could not open file!")
 
   void write_classes_to_bin(const char id[], Object *comp_obj) {
@@ -108,27 +101,24 @@ void handle_inscode(InstructionMemory *i_mem, FILE *file, const char out_name[])
   CHECK(i_mem->num_ins != count, "Failed to write file!");
 }
 
-void handle_sourcecode(InstructionMemory *i_mem, FILE *file,
+void handle_sourcecode(InstructionMemory *i_mem, FileInfo *fi,
     const char tmp_name[], const char out_name[]) {
   Queue queue;
   FILE *out;
   queue_init(&queue);
-  tokenize(file, &queue);
+  tokenize(fi, &queue);
 
   out = fopen(tmp_name, "w");
 
-  parse(&queue, out);
+  parse(fi, &queue, out);
 
   queue_deep_delete(&queue, free);
 
   fflush(out);
   fclose(out);
 
-  fclose(file);
-
-  file = fopen(tmp_name, "r");
-  NULL_CHECK(file, "Could not open file!")
-
-  handle_inscode(i_mem, file, out_name);
+  FileInfo cfi = file_info(tmp_name);
+  handle_inscode(i_mem, &cfi, out_name);
+  file_info_finalize(cfi);
 }
 
