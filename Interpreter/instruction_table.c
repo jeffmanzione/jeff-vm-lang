@@ -83,6 +83,8 @@ void register_instructions_here() {
   REGISTER(ISC, "isc")
   REGISTER(ISO, "iso")
   REGISTER(ISA, "isa")
+  REGISTER(IST, "ist")
+  REGISTER(TUPL, "tupl")
 }
 
 int read_word_prog(Word *word, char line[], int index) {

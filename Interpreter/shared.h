@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdarg.h>
 
  #define max(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -53,13 +54,14 @@ typedef struct _ProgramState ProgramState;
 
 typedef void (*Deleter)(void *);
 typedef void (*HT_Action)(const char id[], Object *);
+typedef Object (*ObjectProducer) ();
 
 //typedef enum {
 //  NONE, INTEGER, FLOATING, STRING, ARRAY
 //} Type;
 
 typedef enum {
-  NONE, CHARACTER, INTEGER, FLOATING, ARRAY, REFERENCE, COMPOSITE,
+  NONE, CHARACTER, INTEGER, FLOATING, ARRAY, REFERENCE, COMPOSITE, TUPLE,
   // Instruction only
   STRING_INS,
 } Type;
@@ -73,6 +75,11 @@ typedef struct _Object {
     Array      *array;
     Object     *ref;
     Composite  *comp;
+
+    struct {
+        Object *tuple_elements;
+        size_t  tuple_size;
+    };
   };
 } Object;
 
@@ -94,6 +101,10 @@ Object   obj_is_a(Object type, Object to_test, ProgramState);
 
 Object to_ref(Object *obj);
 Object deref(Object obj);
+
+Object object_tuple(int64_t num_elts, ...);
+Object object_tuple_get(int64_t num_elts, ObjectProducer get_obj);
+
 
 void append(FILE *head, FILE *tail);
 

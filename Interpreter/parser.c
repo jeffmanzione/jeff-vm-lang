@@ -398,7 +398,6 @@ void parse_class_method(Parser *parser, FILE *out, Composite *class,
   if (nextIsAndRemove(parser, COLON)) {
     remove_if_present(parser, ENDLINE);
 
-    // TODO
     PARSER_CHECK(!nextIsAndRemove(parser, LPAREN), queue_peek(parser->tok_q),
         "Expected ( after : in super constructor!")
 

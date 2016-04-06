@@ -142,6 +142,8 @@ typedef enum {
   ISC,
   ISO,
   ISA,
+  IST,
+  TUPL,
 } Op;
 
 typedef struct _Instruction {

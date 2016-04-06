@@ -14,7 +14,6 @@
 #include "array.h"
 #include "class.h"
 
-
 //char *INSTRUCTIONS[] = { "nop", "exit", "push", "pushm", "pop", "flip", "set",
 //    "get", "is", "open", "close", "jump", "call", "ret", "print", "dup", "not",
 //    "add", "sub", "mult", "div", "mod", "printn", "and", "or", "xor", "eq",
@@ -60,6 +59,12 @@ void execute_lookup(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
 void execute_frame(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
+void execute_tuple(const Instruction ins, InstructionMemory *ins_mem,
+    Context **context, Stack *stack);
+
+Object stack_pull(Stack *stack) {
+  return deref(pop_stack(stack));
+}
 
 int instructions_init(InstructionMemory *instructs, size_t capacity) {
   instructs->ins = (Instruction *) calloc(capacity, sizeof(Instruction));
@@ -172,7 +177,7 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
       //printf("%s\n", str);
       break;
     case (POP):
-      deref(pop_stack(stack));
+      stack_pull(stack);
       break;
     case (FLIP):
       first = pop_stack(stack);
@@ -229,6 +234,7 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
     case (ISC):
     case (ISO):
     case (ISA):
+    case (IST):
       execute_unary(ins, ins_mem, context, stack);
       break;
     case (DUP):
@@ -268,6 +274,9 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
     case (CLSG):
       execute_composites(ins, ins_mem, context, stack);
       break;
+    case (TUPL):
+      execute_tuple(ins, ins_mem, context, stack);
+      break;
     default:
       printf(">>> %d\n", ins.op);
       EXIT_WITH_MSG("Unknown Instruction!")
@@ -293,15 +302,28 @@ void execute_frame(const Instruction ins, InstructionMemory *ins_mem,
 
 void execute_exit(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  Object val = deref(pop_stack(stack));
+  Object val = stack_pull(stack);
 
   printf("Exit status: %"PRId64"\n", val.int_value);
   fflush(stdout);
 }
 
+void execute_tuple(const Instruction ins, InstructionMemory *ins_mem,
+    Context **context, Stack *stack) {
+  Object val = stack_pull(stack);
+  CHECK(INTEGER != val.type, "All tuple ops should have a size specified")
+
+  Object get_my_obj() {
+    return stack_pull(stack);
+  }
+
+  Object tup = object_tuple_get(val.int_value, get_my_obj);
+  push_stack(stack, tup);
+}
+
 void execute_unary(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  Object val = deref(pop_stack(stack));
+  Object val = stack_pull(stack);
   switch (ins.op) {
     case (NOT):
       if (NONE == val.type) {
@@ -351,6 +373,10 @@ void execute_unary(const Instruction ins, InstructionMemory *ins_mem,
       val = (ARRAY == val.type) ? TRUE_OBJECT : NONE_OBJECT;
       push_stack(stack, val);
       break;
+    case (IST):
+      val = (TUPLE == val.type) ? TRUE_OBJECT : NONE_OBJECT;
+      push_stack(stack, val);
+      break;
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_unary!")
   }
@@ -375,8 +401,8 @@ void execute_unary_ref(const Instruction ins, InstructionMemory *ins_mem,
 void execute_binary(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
   Object new;
-  Object second = deref(pop_stack(stack));
-  Object first = deref(pop_stack(stack));
+  Object second = stack_pull(stack);
+  Object first = stack_pull(stack);
   switch (ins.op) {
     case (ADD):
       /*if (STRING == second.type || STRING == first.type) {
@@ -428,12 +454,12 @@ void execute_var_len_help(int num_args, Stack *stack) {
   Object val;
 
   if (1 == num_args) {
-    object_print(deref(pop_stack(stack)), stdout);
+    object_print(stack_pull(stack), stdout);
     fflush(stdout);
     return;
   }
 
-  val = deref(pop_stack(stack));
+  val = stack_pull(stack);
 
   execute_var_len_help(num_args - 1, stack);
 
@@ -445,7 +471,7 @@ void execute_var_len_help(int num_args, Stack *stack) {
 
 void execute_var_len(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  Object len = deref(pop_stack(stack));
+  Object len = stack_pull(stack);
   CHECK(INTEGER != len.type,
       "Can only use int to specify length for var_len instruction")
 
@@ -465,7 +491,7 @@ void execute_var_len(const Instruction ins, InstructionMemory *ins_mem,
 }
 
 Array * const get_array(Stack *stack) {
-  Object array_obj = deref(pop_stack(stack));
+  Object array_obj = stack_pull(stack);
   CHECK(ARRAY != array_obj.type, "Tried to manipulate something not an array.")
   return array_obj.array;
 }
@@ -481,7 +507,7 @@ void execute_array(const Instruction ins, InstructionMemory *ins_mem,
       push_stack(stack, new);
       break;
     case (AADD):
-      second = deref(pop_stack(stack));
+      second = stack_pull(stack);
       array_obj = deref(peek_stack(stack));
       //printf("type=%d\n", second.type);
       CHECK(ARRAY != array_obj.type,
@@ -514,8 +540,8 @@ void execute_array(const Instruction ins, InstructionMemory *ins_mem,
 
 void execute_array_shift(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  Object second = deref(pop_stack(stack));
-  Object first = deref(pop_stack(stack));
+  Object second = stack_pull(stack);
+  Object first = stack_pull(stack);
   CHECK(ARRAY != second.type || ARRAY != first.type,
       "Cannot use <</>> with non int/int or array.")
   switch (ins.op) {
@@ -557,7 +583,7 @@ void execute_array_binary(const Instruction ins, InstructionMemory *ins_mem,
 //  1  2
 // arr[i]
 
-  Object second = deref(pop_stack(stack));
+  Object second = stack_pull(stack);
   Array * const array = get_array(stack);
 
   switch (ins.op) {
@@ -585,8 +611,8 @@ void execute_array_binary(const Instruction ins, InstructionMemory *ins_mem,
 
 void execute_array_ternary(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  Object third = deref(pop_stack(stack));
-  Object second = deref(pop_stack(stack));
+  Object third = stack_pull(stack);
+  Object second = stack_pull(stack);
   Array * const array = get_array(stack);
 
   CHECK(NONE != second.type && INTEGER != second.type,
@@ -632,7 +658,7 @@ void execute_addr(const Instruction ins, InstructionMemory *ins_mem,
 
 void execute_unary_addr(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  Object val = deref(pop_stack(stack));
+  Object val = stack_pull(stack);
   switch (ins.op) {
     case (IF):
       if (NONE != val.type) {
@@ -651,8 +677,8 @@ void execute_unary_addr(const Instruction ins, InstructionMemory *ins_mem,
 
 void execute_bin_addr(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  Object second = deref(pop_stack(stack));
-  Object first = deref(pop_stack(stack));
+  Object second = stack_pull(stack);
+  Object first = stack_pull(stack);
   switch (ins.op) {
     case (IFEQ):
       if (first.int_value == second.int_value) {
@@ -681,13 +707,13 @@ void execute_lookup(const Instruction ins, InstructionMemory *ins_mem,
       //printf("Getting value of '%s' which is of %d.\n", ins.id, val_ptr->type); fflush(stdout);
       break;
     case (SET):
-      val = deref(pop_stack(stack));
+      val = stack_pull(stack);
       //printf("\nSETTING %s %d\n", ins.id, val.type);
       context_set(ins.id, val, *context);
       //printf("!!! %d\n", context_lookup(ins.id, *context)->type);
       break;
     case (RSET):
-      val = deref(pop_stack(stack));
+      val = stack_pull(stack);
       ref = pop_stack(stack);
       if (NONE == ref.type) {
         EXIT_WITH_MSG("Attempting to assign value to null pointer.")
@@ -767,7 +793,7 @@ void scall_context(const Instruction ins, InstructionMemory *ins_mem,
 
 void execute_composites_id(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  Object obj = deref(pop_stack(stack)), to_get;
+  Object obj = stack_pull(stack), to_get;
 
   Object new, *tmp;
 

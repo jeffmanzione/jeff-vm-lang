@@ -151,6 +151,19 @@ void object_print_outer(Object obj, FILE *out) {
     }
 
     fprintf(out, "]");
+  } else if (TUPLE == obj.type) {
+    fprintf(out, "(");
+
+    if (0 < obj.tuple_size) {
+      object_print_outer(deref(obj.tuple_elements[0]), out);
+      int i;
+      for (i = 1; i < obj.tuple_size; i++) {
+        fprintf(out, ",");
+        object_print_outer(deref(obj.tuple_elements[i]), out);
+      }
+    }
+
+    fprintf(out, ")");
   } else if (NONE == obj.type) {
     fprintf(out, "%s", "(None)");
   } /* else if (STRING == obj.type) {
@@ -192,6 +205,15 @@ uint32_t hash_code_composite(Composite *comp, ProgramState state) {
   return (uint32_t) comp;
 }
 
+uint32_t hash_code_tuple(const Object obj, ProgramState state) {
+  uint32_t hash = 0;
+  int i;
+  for (i = 0; i < obj.tuple_size; i++) {
+    hash ^= hash_code(obj.tuple_elements[i], state);
+  }
+  return hash;
+}
+
 uint32_t hash_code(const Object obj, ProgramState state) {
   uint64_t ul;
 
@@ -209,6 +231,8 @@ uint32_t hash_code(const Object obj, ProgramState state) {
       return hash_code_array(obj.array, state);
     case COMPOSITE:
       return hash_code_composite(obj.comp, state);
+    case TUPLE:
+      return hash_code_tuple(obj, state);
     case REFERENCE:
       printf("REF!!!!\n");
       return -1;
@@ -254,6 +278,21 @@ Object equals_composite(Composite *c1, Composite * c2, ProgramState state) {
   return answer > 0 ? TRUE_OBJECT : NONE_OBJECT;
 }
 
+Object equals_tuple(Object o1, Object o2, ProgramState state) {
+  if (o1.tuple_size != o2.tuple_size) {
+    return NONE_OBJECT;
+  }
+
+  int i;
+  for (i = 0; i < o1.tuple_size; i++) {
+    if (NONE
+        == equals(o1.tuple_elements[i], o2.tuple_elements[i], state).type) {
+      return NONE_OBJECT;
+    }
+  }
+  return TRUE_OBJECT;
+}
+
 Object equals(Object o1, Object o2, ProgramState state) {
   if (hash_code(o1, state) != hash_code(o2, state)) {
     return NONE_OBJECT;
@@ -284,6 +323,8 @@ Object equals(Object o1, Object o2, ProgramState state) {
       return equals_array(o1.array, o2.array, state);
     case COMPOSITE:
       return equals_composite(o1.comp, o2.comp, state);
+    case TUPLE:
+      return equals_tuple(o1, o2, state);
     default:
       return NONE_OBJECT;
   }
@@ -326,6 +367,36 @@ Object deref(Object obj) {
     return *obj.ref;
   }
   return obj;
+}
+
+Object object_tuple_base(int num_elts) {
+  Object tup;
+  tup.type = TUPLE;
+  tup.tuple_size = num_elts;
+  tup.tuple_elements = NEW_ARRAY(tup.tuple_elements, num_elts, Object)
+  return tup;
+}
+
+Object object_tuple(int64_t num_elts, ...) {
+  Object tup = object_tuple_base(num_elts);
+  va_list elts;
+  va_start(elts, num_elts);
+  int i;
+  for (i = 0; i < num_elts; i++) {
+    tup.tuple_elements[i] = va_arg(elts, Object);
+  }
+  va_end(elts);
+  return tup;
+}
+
+Object object_tuple_get(int64_t num_elts, ObjectProducer get_obj) {
+  Object tup = object_tuple_base(num_elts);
+  int i;
+  for (i = 0; i < num_elts; i++) {
+    tup.tuple_elements[i] = get_obj();
+  }
+
+  return tup;
 }
 
 char *object_to_string(const Object obj) {
