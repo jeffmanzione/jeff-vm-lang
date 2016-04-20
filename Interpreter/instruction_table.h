@@ -64,6 +64,8 @@ void it_finalize();
 void it_read_instruction(Word word, char line[], Instruction *ins, char ***ids,
     int index, Queue *strs, Queue *ins_indices);
 
+InsType it_instruction_type(Op op);
+
 int read_word_prog(Word *, char line[], int index);
 int64_t get_int(char *pch);
 

@@ -49,8 +49,7 @@ void set_method_address(InstructionMemory *ins_mem, char fun_id[]) {
   strcat(fun_name, start);
   //printf("%s.%s()\n", class_name, fun_name);
 
-  Object class = instructions_get_class_by_id(ins_mem,
-      instructions_get_class_by_name(ins_mem, class_name));
+  Object class = instructions_get_class_object_by_name(ins_mem, class_name);
 
   Object *int_obj = NEW(int_obj, Object)
   int_obj->type = INTEGER;
@@ -122,7 +121,6 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
 
   num_ins = ins_mem->index;
 
-
   while (0 < strs.size) {
     char *string = queue_remove(&strs);
     int ins_index = (int) queue_remove(&ins_indices);
@@ -152,6 +150,7 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
       case (IFEQ):
       case (IF):
       case (IFN):
+      case (PGET):
 //        printf("%s\n", ids[index]);
 //        fflush(stdout);
         adr = (int) hashtable_lookup(id_table, ids[index]);
@@ -173,7 +172,6 @@ int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {
 //    printf("<<<END\n"); fflush(stdout);
   }
 //  printf("A\n"); fflush(stdout);
-
 
   free(id_table);
 
@@ -198,7 +196,6 @@ int load_instructions(FILE *in, InstructionMemory *ins_mem) {
 void read_class_bin(FILE *file, InstructionMemory *ins_mem) {
   Composite *class = composite_class_load_bin(file, ins_mem);
   instructions_insert_class(ins_mem, class);
-// TODO
 }
 
 int load_bytecode(FILE *in, InstructionMemory *ins_mem) {

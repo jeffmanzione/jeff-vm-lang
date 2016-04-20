@@ -61,6 +61,8 @@ void execute_frame(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
 void execute_tuple(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
+void execute_fun_ptr(const Instruction ins, InstructionMemory *ins_mem,
+    Context **context, Stack *stack);
 
 Object stack_pull(Stack *stack) {
   return deref(pop_stack(stack));
@@ -75,7 +77,7 @@ int instructions_init(InstructionMemory *instructs, size_t capacity) {
   instructs->classes = NEW_ARRAY(instructs->classes, DEFAULT_CLASS_ARRAY_SZ,
       Object)
   instructs->num_classes = 0;
-
+  queue_init(&instructs->classes_queue);
   return capacity;
 }
 
@@ -88,6 +90,8 @@ void instructions_finalize(InstructionMemory *instructs) {
   if (NULL != instructs->classes) {
     free(instructs->classes);
   }
+
+  queue_shallow_delete(&instructs->classes_queue);
 }
 
 void instructions_insert_class(InstructionMemory *instructs, Composite *class) {
@@ -107,7 +111,7 @@ void instructions_insert_class(InstructionMemory *instructs, Composite *class) {
 
   char *class_name = object_to_string(*composite_get(class, "name"));
   hashtable_insert(instructs->classes_ht, class_name, obj);
-
+  queue_add(&instructs->classes_queue, obj);
   composite_set(class, WHICH_MEMBER, int_obj);
 
   free(class_name);
@@ -116,6 +120,7 @@ void instructions_insert_class(InstructionMemory *instructs, Composite *class) {
 
 int instructions_get_class_by_name(InstructionMemory *instructs,
     const char class_name[]) {
+
   Object *comp_obj = hashtable_lookup(instructs->classes_ht, class_name);
 
   NULL_CHECK(comp_obj, "Class could not be found upon lookup!")
@@ -134,6 +139,7 @@ Object instructions_get_class_by_id(InstructionMemory *instructs, int id) {
 Object instructions_get_class_object_by_name(InstructionMemory *instructs,
     const char class_name[]) {
   NULL_CHECK(instructs, "InstructionMemory * was null!");
+
   return instructions_get_class_by_id(instructs,
       instructions_get_class_by_name(instructs, class_name));
 }
@@ -255,7 +261,6 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
     case (AADD):
     case (ALSH):
     case (ARSH):
-    case (AGET):
     case (ASET):
     case (AENQ):
     case (ADEQ):
@@ -275,7 +280,13 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
       execute_composites(ins, ins_mem, context, stack);
       break;
     case (TUPL):
+    case (TGET):
+    case (IGET):
       execute_tuple(ins, ins_mem, context, stack);
+      break;
+    case (PGET):
+    case (PCALL):
+      execute_fun_ptr(ins, ins_mem, context, stack);
       break;
     default:
       printf(">>> %d\n", ins.op);
@@ -310,15 +321,35 @@ void execute_exit(const Instruction ins, InstructionMemory *ins_mem,
 
 void execute_tuple(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  Object val = stack_pull(stack);
-  CHECK(INTEGER != val.type, "All tuple ops should have a size specified")
+  Object val = stack_pull(stack), tup, new;
 
   Object get_my_obj() {
     return stack_pull(stack);
   }
 
-  Object tup = object_tuple_get(val.int_value, get_my_obj);
-  push_stack(stack, tup);
+  CHECK(INTEGER != val.type, "All indexable ops should have a size specified")
+  switch (ins.op) {
+    case (TUPL):
+      tup = object_tuple_get(val.int_value, get_my_obj);
+      push_stack(stack, tup);
+      break;
+    case (IGET): // indexable[i]
+    case (TGET):
+      tup = stack_pull(stack);
+      if (TUPLE == tup.type) {
+        CHECK(val.int_value >= tup.tuple_size,
+            "Cannot index out of tuple bounds for TGET")
+        push_stack(stack, tup.tuple_elements[val.int_value]);
+      } else if (ARRAY == tup.type) {
+        new = array_get(tup.array, val.int_value);
+        push_stack(stack, new);
+      } else
+        EXIT_WITH_MSG("Expected type tuple for TGET")
+
+      break;
+    default:
+      EXIT_WITH_MSG("Unexpected instruction for execute_tuple!")
+  }
 }
 
 void execute_unary(const Instruction ins, InstructionMemory *ins_mem,
@@ -333,6 +364,7 @@ void execute_unary(const Instruction ins, InstructionMemory *ins_mem,
       }
       push_stack(stack, val);
       break;
+
     case (PRINT):
       object_print(val, stdout);
       //printf("\n");
@@ -523,7 +555,7 @@ void execute_array(const Instruction ins, InstructionMemory *ins_mem,
     case (APOP): // x <= arr
       execute_array_unary(ins, ins_mem, context, stack);
       break;
-    case (AGET): // arr[i]
+    case (IGET): // arr[i]
     case (AENQ): // arr <= x
     case (APUSH): // x => arr
     case (AREM): // x <- arr[i]
@@ -593,11 +625,6 @@ void execute_array_binary(const Instruction ins, InstructionMemory *ins_mem,
     case (APUSH):
       array_push(array, second);
       return;
-    case (AGET): // arr[i]
-      CHECK(NONE != second.type && INTEGER != second.type,
-          "Tried to index an array with something not an integer.")
-      new = array_get(array, second.int_value);
-      break;
     case (AREM): // x <- arr[i]
       CHECK(NONE != second.type && INTEGER != second.type,
           "Tried to index an array with something not an integer.")
@@ -630,15 +657,21 @@ void execute_array_ternary(const Instruction ins, InstructionMemory *ins_mem,
   }
 }
 
-void call_context(const Instruction ins, InstructionMemory *ins_mem,
+void call_context_adr(Address address, InstructionMemory *ins_mem,
     Context **context) {
   int adr;
   *context = context_open(*context);
   (*context)->ip = NEW((*context)->ip, int)
   (*context)->new_ip = TRUE;
-  adr = ins.adr;
+  adr = address.index;
   CHECK(FAILURE == adr, "No known label.");
   *((*context)->ip) = adr;
+}
+
+void call_context(const Instruction ins, InstructionMemory *ins_mem,
+    Context **context) {
+  Address address = { 0, ins.adr };
+  call_context_adr(address, ins_mem, context);
 }
 
 void execute_addr(const Instruction ins, InstructionMemory *ins_mem,
@@ -754,11 +787,12 @@ void ocall_fun_helper(const char fun_name[], InstructionMemory *ins_mem,
   int adr;
   *context = context_open(*context);
   (*context)->ip = NEW((*context)->ip, int)
+
   (*context)->new_ip = TRUE;
   //printf("Calling %p\n", get(comp_obj.comp->class->methods, fun_name));
   //fflush(stdout);
-
   Object *adr_obj = hashtable_lookup(class->methods, fun_name);
+
   while (NULL == adr_obj) {
     Object *super = composite_get(class, "super");
     CHECK(NONE == super->type, "Object does not support specified method!")
@@ -825,6 +859,28 @@ void execute_composites_id(const Instruction ins, InstructionMemory *ins_mem,
       break;
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_composites_id!")
+  }
+}
+
+void execute_fun_ptr(const Instruction ins, InstructionMemory *ins_mem,
+    Context **context, Stack *stack) {
+  Object obj;
+  switch (ins.op) {
+    case (PGET):
+      obj.type = FUNCTION;
+      obj.address.namespace_id = 0;
+      obj.address.index = ins.adr;
+      push_stack(stack, obj);
+      break;
+    case (PCALL):
+      obj = stack_pull(stack);
+      CHECK(FUNCTION != obj.type,
+          "Cannot treat a non-function pointer as a function.")
+      call_context_adr(obj.address, ins_mem, context);
+      break;
+    default:
+      EXIT_WITH_MSG("Unexpected instruction for execute_fun_ptr!")
+
   }
 }
 

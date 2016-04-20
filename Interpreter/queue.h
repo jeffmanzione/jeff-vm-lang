@@ -29,6 +29,7 @@ typedef struct _Queue {
 void queue_init(Queue *queue);
 void queue_shallow_delete(Queue *queue);
 void queue_deep_delete(Queue *queue, Deleter del);
+void queue_iterate(Queue *queue, Q_Action act);
 void *queue_peek(const Queue *queue);
 void *queue_last(const Queue *queue);
 void *queue_remove(Queue *queue);

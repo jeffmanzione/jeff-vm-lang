@@ -251,15 +251,33 @@ void parse_elements(Parser *parser, FILE *out) {
       || nextIsWordAndRemove(parser, FUN_KEYWORD)) {
     parse_fun(parser, out);
   } else if (nextIsWordAndRemove(parser, IMPORT_KEYWORD)) {
-    char fn[MAX_LINE_LEN];
+
     Token fn_token = *((Token *) queue_peek(parser->tok_q));
+    char fn[MAX_LINE_LEN];
     Queue child_queue;
     fn[0] = '\0';
-    PARSER_CHECK(!nextIsAndRemove(parser, STR), &fn_token,
-        "Expected string after keyword "IMPORT_KEYWORD".")
 
-    strncpy(fn, fn_token.text + 1, strlen(fn_token.text) - 2);
-    fn[strlen(fn_token.text) - 2] = '\0';
+    if (nextIsAndRemove(parser, STR)) {
+      strncpy(fn, fn_token.text + 1, strlen(fn_token.text) - 2);
+      fn[strlen(fn_token.text) - 2] = '\0';
+
+    } else if (nextIsAndRemove(parser, WORD)) {
+      strncpy(fn, fn_token.text, strlen(fn_token.text));
+      fn[strlen(fn_token.text)] = '\0';
+      while (nextIsAndRemove(parser, PERIOD)) {
+        strcat(fn, "/");
+        Token ext = *((Token *) queue_peek(parser->tok_q));
+        PARSER_CHECK(!nextIsAndRemove(parser, WORD), &ext,
+            "Expected word after . in module extension.")
+        strcat(fn, ext.text);
+      }
+      strcat(fn, ".jl");
+      PARSER_CHECK(!file_exist(fn), &fn_token, "Could not find module.")
+
+    } else {
+      parser_exit(parser, &fn_token,
+          "Expected string or module after keyword "IMPORT_KEYWORD".");
+    }
 
     FileInfo child_fi = file_info(fn);
 
@@ -275,6 +293,7 @@ void parse_elements(Parser *parser, FILE *out) {
     child_parser.in_name = fn;
     parse_top_level(&child_parser, out);
     file_info_finalize(child_fi);
+
   } else {
     //printf("WAS %d\nLine %d(%d)\n", tok->type, tok->line, tok->col);
     //fflush(stdout);
@@ -306,9 +325,8 @@ void parse_class(Parser *parser, FILE *out) {
         "Could not find class with name.")
     super = super_obj->comp;
   } else {
-    super = class_class;
+    super = object_class;
   }
-
   class = composite_class_new(class_name.text, super);
   class_obj = NEW(class_obj, Object)
   class_obj->type = COMPOSITE;
@@ -439,7 +457,7 @@ void parse_fun(Parser *parser, FILE *out) {
 
   remove_if_present(parser, ENDLINE);
 
-// if the following is true, the this is a function predef.
+  // if the following is true, the this is a function predef.
   tok = *((Token *) queue_peek(parser->tok_q));
   if (WORD == tok.type
       && (MATCHES(tok.text, DEF_KEYWORD) || MATCHES(tok.text, FUN_KEYWORD)
@@ -466,7 +484,7 @@ void parse_fun(Parser *parser, FILE *out) {
   remove_if_present(parser, ENDLINE);
 }
 
-int parse_fun_arguments_helper(Parser *parser, FILE *out) {
+int parse_fun_arguments_helper(Parser *parser, FILE *out, int index) {
 /// printf("parse_fun_arguments_helper()\n"); fflush(stdout);
   Token tok_id = *((Token *) queue_peek(parser->tok_q));
   int num_args = 1;
@@ -478,9 +496,17 @@ int parse_fun_arguments_helper(Parser *parser, FILE *out) {
       "Expected arg name.");
 
   if (nextIsAndRemove(parser, COMMA)) {
-    num_args = 1 + parse_fun_arguments_helper(parser, out);
+    num_args = 1 + parse_fun_arguments_helper(parser, out, index + 1);
   }
 
+//printf("INDEX=%d, NUM_ARGS=%d\n", index, num_args);
+  if (index > 0 || num_args > 1) {
+    write_ins_default(DUP, out);
+    // Note that num_args is not necessarily the total number of args at this point.
+    write_ins_value(PUSH, index, out);
+    //write_ins_default(FLIP, out);
+    write_ins_default(IGET, out);
+  }
   write_ins_id(SET, tok_id.text, out);
 
   return num_args;
@@ -493,7 +519,7 @@ int parse_fun_arguments(Parser *parser, FILE *out) {
     return 0;
   }
 
-  num_args = parse_fun_arguments_helper(parser, out);
+  num_args = parse_fun_arguments_helper(parser, out, 0);
   PARSER_CHECK(!nextIsAndRemove(parser, RPAREN), queue_peek(parser->tok_q),
       "Expected )");
   return num_args;
@@ -536,14 +562,52 @@ void parse_exp(Parser *parser, FILE *out) {
   parse_exp_tuple(parser, out);
 }
 
-int parse_exp_tuple(Parser *parser, FILE *out) {
+int parse_exp_tuple_helper(Parser *parser, FILE *out, int count) {
 // printf("parse_exp_tuple()\n"); fflush(stdout);
-  parse_exp_for(parser, out);
+  parse_exp_anon_fun(parser, out);
 
   if (!nextIsAndRemove(parser, COMMA)) {
+    if (count > 0) {
+      write_ins_value(PUSH, count + 1, out);
+      write_ins_default(TUPL, out);
+    }
     return 1;
   }
-  return 1 + parse_exp_tuple(parser, out);
+  return 1 + parse_exp_tuple_helper(parser, out, count + 1);
+}
+
+int parse_exp_tuple(Parser *parser, FILE *out) {
+// printf("parse_exp_tuple()\n"); fflush(stdout);
+  return parse_exp_tuple_helper(parser, out, 0);
+}
+
+void parse_exp_anon_fun(Parser *parser, FILE *out) {
+  if (!nextIsAndRemove(parser, AT)) {
+    parse_exp_for(parser, out);
+    return;
+  }
+
+  int num_id = parser->tok_q->size;
+
+  remove_if_present(parser, ENDLINE);
+
+  write_ins_id_num(JUMP, "anon_end", num_id, parser, out);
+
+  write_label_num("anon", num_id, parser, out);
+
+  parse_fun_arguments(parser, out);
+
+  remove_if_present(parser, ENDLINE);
+
+  parse_body(parser, out);
+
+  write_ins_default(RET, out);
+
+  remove_if_present(parser, ENDLINE);
+
+  write_label_num("anon_end", num_id, parser, out);
+
+  write_ins_id_num(PGET, "anon", num_id, parser, out);
 }
 
 void parse_exp_for(Parser *parser, FILE *out) {
@@ -578,7 +642,7 @@ void parse_exp_for(Parser *parser, FILE *out) {
       write_ins_default(DUP, body_head);
       write_ins_id_num(GET, "arr_tmp", num, parser, body_head);
       write_ins_default(FLIP, body_head);
-      write_ins_default(AGET, body_head);
+      write_ins_default(IGET, body_head);
       write_ins_id(SET, var_name.text, body_head);
 
       write_ins_value(PUSH, 1, aft);
@@ -762,12 +826,16 @@ void parse_exp_if(Parser *parser, FILE *out) {
 //  set_id: write_ins_id(SET, tok_first.text, out);
 //}
 
-void parse_exp_assign_multi_lhs(Parser *parser, FILE *out) {
+void parse_exp_assign_multi_lhs(Parser *parser, FILE *out, int index) {
 // recurse
   Token var_name = *((Token *) queue_peek(parser->tok_q));
+  write_ins_default(DUP, out);
+  write_ins_value(PUSH, index, out);
+//write_ins_default(FLIP, out);
+  write_ins_default(IGET, out);
   if (nextTwoAreAndRemove(parser, WORD, COMMA)) {
-    parse_exp_assign_multi_lhs(parser, out);
     write_ins_id(SET, var_name.text, out);
+    parse_exp_assign_multi_lhs(parser, out, index + 1);
   } else if (nextTwoAreAndRemove(parser, WORD, RBRCE)) {
     write_ins_id(SET, var_name.text, out);
   } else {
@@ -775,7 +843,7 @@ void parse_exp_assign_multi_lhs(Parser *parser, FILE *out) {
     write_ins_default(FLIP, out);
     write_ins_default(RSET, out);
     if (nextIsAndRemove(parser, COMMA)) {
-      parse_exp_assign_multi_lhs(parser, out);
+      parse_exp_assign_multi_lhs(parser, out, index + 1);
     } else {
       PARSER_CHECK(!nextIsAndRemove(parser, RBRCE), queue_peek(parser->tok_q),
           "Expected } to close LHS assign")
@@ -791,7 +859,7 @@ void parse_exp_assign(Parser *parser, FILE *out) {
   if (nextIsAndRemove(parser, LBRCE)) {
     FILE *hold = tmpfile();
 
-    parse_exp_assign_multi_lhs(parser, hold);
+    parse_exp_assign_multi_lhs(parser, hold, 0);
 
     PARSER_CHECK(!nextIsAndRemove(parser, EQUALS), queue_peek(parser->tok_q),
         "Expected = after LHS assign")
@@ -872,10 +940,10 @@ void parse_exp_assign_array(Parser *parser, FILE *out) {
 
     write_ins_default(AINS, out);
 
-  } else if (nextThreeAreAndRemove(parser, COLON, LTHAN, EQUALS)) {
+  } else if (nextTwoAreAndRemove(parser, COLON, LTHANEQ)) {
     append(out, hold);
 
-    parse_exp_or(parser, out);
+    parse_exp(parser, out);
     write_ins_default(AENQ, out);
 
   } else if (nextThreeAreAndRemove(parser, COLON, EQUALS, GTHAN)) {
@@ -1250,7 +1318,7 @@ void parse_exp_unary(Parser *parser, FILE *out) {
         PARSER_CHECK(!nextIsAndRemove(parser, RBRAC), queue_peek(parser->tok_q),
             "Expected ].");
 
-        write_ins_default(AGET, out);
+        write_ins_default(IGET, out);
 
       } else {
         break;
@@ -1270,7 +1338,7 @@ void parse_exp_subscript(Parser *parser, FILE *out) {
     PARSER_CHECK(!nextIsAndRemove(parser, RBRAC), queue_peek(parser->tok_q),
         "Expected ].");
 
-    write_ins_default(AGET, out);
+    write_ins_default(IGET, out);
   }
 }
 
@@ -1366,7 +1434,7 @@ void parse_exp_array_dec(Parser *parser, FILE *out) {
   write_ins_default(ANEW, out);
 
   while (RBRAC != (tok = queue_peek(parser->tok_q))->type) {
-    parse_exp_for(parser, out);
+    parse_exp_anon_fun(parser, out);
     write_ins_default(AADD, out);
     if (!nextIsAndRemove(parser, COMMA)) {
       break;
@@ -1417,7 +1485,8 @@ void parse_exp_num_or_id(Parser *parser, FILE *out) {
       return;
     }
     if (hashtable_lookup(parser->classes, tok->text)) {
-      Composite *class = hashtable_lookup(parser->classes, tok->text)->comp;
+      Composite *class = ((Object *) hashtable_lookup(parser->classes,
+          tok->text))->comp;
       queue_remove(parser->tok_q);
       char *class_name = object_to_string(*composite_get(class, "name"));
       write_ins_id(CLSG, class_name, out);
@@ -1446,12 +1515,14 @@ void parse_exp_num_or_id(Parser *parser, FILE *out) {
           write_ins_default(EXIT, out);
         } else if (MATCHES(HASH_FUNCTION, tok->text)) {
           write_ins_default(HASH, out);
+        } else if (NULL == hashtable_lookup(parser->fun_names, tok->text)) {
+          write_ins_id(GET, tok->text, out);
+          write_ins_default(PCALL, out);
         } else {
           write_ins_id(CALL, tok->text, out);
         }
-
       } else if (NULL != hashtable_lookup(parser->fun_names, tok->text)) {
-        write_ins_id(CALL, tok->text, out);
+        write_ins_id(PGET, tok->text, out);
       } else {
         write_ins_id(GET, tok->text, out);
       }

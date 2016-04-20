@@ -13,12 +13,22 @@
 #include "array.h"
 
 Class *class_class = NULL;
+Class *object_class = NULL;
 
 void class_init(InstructionMemory *instructs) {
-  class_class = composite_class_new("Class", NULL);
-  class_class->class = class_class;
+  object_class = composite_class_new(OBJECT_CLASS_NAME, NULL);
 
   Object class_obj;
+  class_obj.type = COMPOSITE;
+  class_obj.comp = object_class;
+
+  composite_set(object_class, "class", class_obj);
+  instructions_insert_class(instructs, object_class);
+
+
+  class_class = composite_class_new(CLASS_CLASS_NAME, object_class);
+  class_class->class = class_class;
+
   class_obj.type = COMPOSITE;
   class_obj.comp = class_class;
 
@@ -30,7 +40,6 @@ void class_init(InstructionMemory *instructs) {
   composite_class_add_field(class_class, "super");
 
   instructions_insert_class(instructs, class_class);
-
 }
 
 void class_finalize() {
@@ -55,7 +64,8 @@ Class *composite_class_new(const char class_name[], Class *super_class) {
 
   super.comp = super_class;
   if (NULL == super.comp) {
-    super.type = NONE;
+    super = NONE_OBJECT;
+//    super.type = NONE;
   } else {
     super.type = COMPOSITE;
   }
@@ -121,6 +131,7 @@ Class *composite_class_load_bin(FILE *stream, InstructionMemory *ins_mem) {
   read_word_from_stream(stream, buff);
   // Read super class name.
   read_word_from_stream(stream, buff2);
+
   Class *class = composite_class_new(buff,
       instructions_get_class_object_by_name(ins_mem, buff2).comp);
 
@@ -256,7 +267,7 @@ void composite_class_save_bin(FILE *file, Class *class,
     int num_args = deref(array_get(arr, 1)).int_value;
     fwrite(method_name, strlen(method_name) + 1, 1, file);
     fwrite(&num_args, sizeof(int), 1, file);
-    int adr = hashtable_lookup(class->methods, method_name)->int_value;
+    int adr = ((Object *)hashtable_lookup(class->methods, method_name))->int_value;
     fwrite(&adr, sizeof(int), 1, file);
     free(method_name);
   }

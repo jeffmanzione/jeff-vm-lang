@@ -12,6 +12,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "class.h"
 #include "array.h"
@@ -92,6 +95,11 @@ void advance_to_next(char **ptr, const char c) {
 void fill_str(char buff[], char *start, char *end) {
   buff[0] = '\0';
   strncat(buff, start, end - start);
+}
+
+int file_exist(char *filename) {
+  struct stat buffer;
+  return (stat(filename, &buffer) == 0);
 }
 
 void append(FILE *head, FILE *tail) {
@@ -382,7 +390,7 @@ Object object_tuple(int64_t num_elts, ...) {
   va_list elts;
   va_start(elts, num_elts);
   int i;
-  for (i = 0; i < num_elts; i++) {
+  for (i = num_elts - 1; i >= 0; i--) {
     tup.tuple_elements[i] = va_arg(elts, Object);
   }
   va_end(elts);
@@ -392,7 +400,7 @@ Object object_tuple(int64_t num_elts, ...) {
 Object object_tuple_get(int64_t num_elts, ObjectProducer get_obj) {
   Object tup = object_tuple_base(num_elts);
   int i;
-  for (i = 0; i < num_elts; i++) {
+  for (i = num_elts - 1; i >= 0; i--) {
     tup.tuple_elements[i] = get_obj();
   }
 

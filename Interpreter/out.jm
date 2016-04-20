@@ -1,8 +1,8 @@
-class Owner:Class:fields{class,name,pets,} methods{new(1),adopt(1),}
-class Pet:Class:fields{class,name,say_msg,} methods{new(2),speak(0),}
+class Owner:Object:fields{class,name,pets,} methods{new(1),adopt(1),}
+class Pet:Object:fields{class,name,say_msg,} methods{new(2),speak(0),eq(1),to_s(0),}
 class Doge:Pet:fields{class,name,breed,age,} methods{new(3),speak(0),}
 class Kitty:Pet:fields{class,size,} methods{new(2),}
-class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
+class Test:Object:fields{class,map,} methods{new(1),get_map(0),}
 
 @println
         set     var
@@ -16,22 +16,22 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         set     str
         push    0
         set     i
-@for_lib_src_print_44
+@for_lib_src_default_print_44
         get     i
         get     str
         alen
         lt
-        ifn     end_lib_src_print_44
+        ifn     end_lib_src_default_print_44
         get     str
         get     i
-        aget
+        iget
         print
         get     i
         push    1
         add
         set     i
-        jump    for_lib_src_print_44
-@end_lib_src_print_44
+        jump    for_lib_src_default_print_44
+@end_lib_src_default_print_44
         ret
 
 @print_strln
@@ -48,43 +48,43 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         set     result
         push    0
         set     i
-@for_lib_src_array_57
+@for_lib_src_default_array_57
         get     i
         get     arr
         alen
         lt
-        ifn     end_lib_src_array_57
+        ifn     end_lib_src_default_array_57
         push    0
         set     j
-@for_lib_src_array_40
+@for_lib_src_default_array_40
         get     j
         get     arr
         get     i
-        aget
+        iget
         alen
         lt
-        ifn     end_lib_src_array_40
+        ifn     end_lib_src_default_array_40
         get     result
         get     result
         alen
         get     arr
         get     i
-        aget
+        iget
         get     j
-        aget
+        iget
         ains
         get     j
         push    1
         add
         set     j
-        jump    for_lib_src_array_40
-@end_lib_src_array_40
+        jump    for_lib_src_default_array_40
+@end_lib_src_default_array_40
         get     i
         push    1
         add
         set     i
-        jump    for_lib_src_array_57
-@end_lib_src_array_57
+        jump    for_lib_src_default_array_57
+@end_lib_src_default_array_57
         get     result
         ret
 
@@ -111,7 +111,13 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         ret
 
 @_Pet_new
+        dup
+        push    1
+        iget
         set     say_msg
+        dup
+        push    0
+        iget
         set     name
         get     self
         oget    name
@@ -140,12 +146,49 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         call    print_strln
         ret
 
+@_Pet_eq
+        set     other
+        get     self
+        oget    name
+        get     other
+        oget    name
+        eq
+        get     self
+        oget    say_msg
+        get     other
+        oget    say_msg
+        eq
+        and
+        ret
+
+@_Pet_to_s
+        anew
+        push    'Pet['
+        aadd
+        get     name
+        aadd
+        push    ']'
+        aadd
+        call    flatten
+        ret
+
 @_Doge_new
+        dup
+        push    2
+        iget
         set     age
+        dup
+        push    1
+        iget
         set     breed
+        dup
+        push    0
+        iget
         set     name
         get     name
         push    'wooofff'
+        push    2
+        tupl
         get     self
         scall   new
         pop
@@ -168,10 +211,18 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         ret
 
 @_Kitty_new
+        dup
+        push    1
+        iget
         set     size
+        dup
+        push    0
+        iget
         set     name
         get     name
         push    'meooowww'
+        push    2
+        tupl
         get     self
         scall   new
         pop
@@ -214,19 +265,19 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         rset
         push    0
         set     i
-@for_258
+@for_269
         get     i
         get     pets
         alen
         lt
-        ifn     end_258
+        ifn     end_269
         get     self
         oget    map
         push    0
         anew
         get     pets
         get     i
-        aget
+        iget
         aadd
         get     i
         aadd
@@ -235,8 +286,8 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         push    1
         add
         set     i
-        jump    for_258
-@end_258
+        jump    for_269
+@end_269
         get     self
         ret
 
@@ -257,25 +308,25 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         call    flatten
         set     methods
         get     methods
-        set     arr_tmp_193
+        set     arr_tmp_204
         push    0
-@for_193
+@for_204
         dup
-        get     arr_tmp_193
+        get     arr_tmp_204
         alen
         lt
-        ifn     end_193
+        ifn     end_204
         dup
-        get     arr_tmp_193
+        get     arr_tmp_204
         flip
-        aget
+        iget
         set     method
         get     method
         call    println
         push    1
         add
-        jump    for_193
-@end_193
+        jump    for_204
+@end_204
         push    'owner1'
         clsg    Owner
         onew
@@ -283,17 +334,23 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         push    'doge1'
         push    'Labrador'
         push    2
+        push    3
+        tupl
         clsg    Doge
         onew
         set     doge1
         push    'doge2'
         push    'Dachshund'
         push    5
+        push    3
+        tupl
         clsg    Doge
         onew
         set     doge2
         push    'kitty1'
         push    3
+        push    2
+        tupl
         clsg    Kitty
         onew
         set     kitty1
@@ -302,14 +359,14 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         get     owner1
         get     tmp
         eq
-        ifn     else_133
+        ifn     else_144
         push    'True'
         call    print_strln
-        jump    end_133
-@else_133
+        jump    end_144
+@else_144
         push    'False'
         call    print_strln
-@end_133
+@end_144
         get     doge1
         call    doge_info
         clsg    Doge
@@ -317,6 +374,11 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         oget    class
         oget    class
         oget    fields
+        call    println
+        clsg    Doge
+        oget    super
+        oget    super
+        oget    super
         call    println
         anew
         push    1
@@ -330,7 +392,7 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         set     arr
         get     arr
         push    2
-        aget
+        iget
         dup
         dref
         flip
@@ -366,9 +428,9 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         get     test1
         ocall   get_map
         push    1
-        aget
+        iget
         push    0
-        aget
+        iget
         ocall   speak
         get     owner1
         oget    pets
@@ -383,7 +445,7 @@ class Test:Class:fields{class,map,} methods{new(1),get_map(0),}
         dup
         get     arr_tmp_15
         flip
-        aget
+        iget
         set     pet
         get     pet
         ocall   speak

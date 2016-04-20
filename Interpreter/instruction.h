@@ -110,7 +110,7 @@ typedef enum {
   // Arrays
   ANEW,
   AADD,
-  AGET,
+  IGET,
   ASET,
   AENQ,
   ADEQ,
@@ -144,6 +144,10 @@ typedef enum {
   ISA,
   IST,
   TUPL,
+  TGET,
+  // Function pointers
+  PGET,
+  PCALL,
 } Op;
 
 typedef struct _Instruction {
@@ -164,6 +168,7 @@ typedef struct {
 
   Object      *classes;
   Hashtable   *classes_ht;
+  Queue        classes_queue;
   size_t       num_classes, class_array_capacity;
 } InstructionMemory;
 

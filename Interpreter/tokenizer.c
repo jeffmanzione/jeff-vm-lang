@@ -28,6 +28,17 @@ FileInfo file_info(const char fn[]) {
   return fi;
 }
 
+FileInfo file_info_file(FILE *tmp_file) {
+  FileInfo fi;
+  fi.name = strdup("TEMPORARY_FILE.jm");
+  fi.fp = tmp_file;
+  NULL_CHECK(fi.fp, "Could not open file!")
+  fi.num_lines = 0;
+  fi.array_len = DEFAULT_NUM_LINES;
+  fi.lines = NEW_ARRAY(fi.lines, fi.array_len, LineInfo)
+  return fi;
+}
+
 void file_info_finalize(FileInfo fi) {
   free(fi.name);
   free(fi.lines);

@@ -10,17 +10,16 @@
 
 #include <stdio.h>
 
+#include "command_line.h"
 #include "instruction.h"
 #include "tokenizer.h"
 
-void load_program(const char in_name[], const char tmp_name[],
-    const char out_name[]);
+void load_program(CL_ProcessInfo *clpi);
 
+void handle_langcode(InstructionMemory *i_mem, FileInfo *fi,
+    FILE *source_file);
 void handle_sourcecode(InstructionMemory *i_mem, FileInfo *fi,
-    const char tmp_name[], const char out_name[]);
-void handle_inscode(InstructionMemory *i_mem, FileInfo *fi,
-    const char out_name[]);
-void handle_bytecode(InstructionMemory *i_mem, FILE *file,
-    const char out_name[]);
+    FILE *bin_file);
+void handle_bytecode(InstructionMemory *i_mem, FILE *bin_file);
 
 #endif /* INTERPRETER_H_ */

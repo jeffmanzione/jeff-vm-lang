@@ -10,21 +10,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+static unsigned int  hash(const Hashtable *hashtable, const char *str);
+
 Hashtable *hashtable_create(int size) {
   Hashtable *new_table;
   int i;
+
   if (size < 1)
     return NULL; /* invalid size for table */
 
+//  printf("A\n");
+//  fflush(stdout);
+
   /* Attempt to allocate memory for the table structure */
-  if ((new_table = malloc(sizeof(Hashtable))) == NULL) {
-    return NULL;
-  }
+  new_table = NEW(new_table, Hashtable)
+
+//  printf("%p %d %d\n", new_table, size, sizeof(H_List *));
+//  fflush(stdout);
 
   /* Attempt to allocate memory for the table itself */
-  if ((new_table->table = malloc(sizeof(H_List *) * size)) == NULL) {
-    return NULL;
-  }
+  new_table->table = NEW_ARRAY(new_table->table, size, H_List *)
 
   /* Initialize the elements of the table */
   for (i = 0; i < size; i++)
@@ -73,7 +78,7 @@ H_List *lookup_id(const Hashtable *hashtable, const char *str) {
   return NULL;
 }
 
-Object *hashtable_lookup(const Hashtable *hashtable, const char *str) {
+void *hashtable_lookup(const Hashtable *hashtable, const char *str) {
   H_List *list = lookup_id(hashtable, str);
   if (NULL == list) {
     return NULL;
@@ -82,7 +87,7 @@ Object *hashtable_lookup(const Hashtable *hashtable, const char *str) {
   return list->obj;
 }
 
-int hashtable_insert(Hashtable *hashtable, const char *id, Object *obj) {
+int hashtable_insert(Hashtable *hashtable, const char *id, void *obj) {
   H_List *new_list;
   //H_List *current_list;
   unsigned int hashval = hash(hashtable, id);
@@ -95,7 +100,7 @@ int hashtable_insert(Hashtable *hashtable, const char *id, Object *obj) {
   //current_list = lookup_id(hashtable, id);
   /* item already exists, don't insert it again. */
   /*if (current_list != NULL)
-    return 2;*/
+   return 2;*/
   /* Insert into list */
   new_list->id = strdup(id);
   new_list->obj = obj;

@@ -1,5 +1,5 @@
-import 'lib_src/print.jl'
-import 'lib_src/array.jl'
+import lib.src.default.print
+import lib.src.default.array
 
 class Owner {
     field name, pets
@@ -21,6 +21,11 @@ class Pet {
         self.say_msg = say_msg
     }
     def speak print_strln(flatten([self.name,' says ',self.say_msg,'!'])) 
+    
+    def eq(other)
+        self.name == other.name & self.say_msg == other.say_msg
+        
+    def to_s flatten(['Pet[', name, ']'])
 }
 
 class Doge : Pet {
@@ -75,6 +80,8 @@ def main {
     doge_info(doge1)
     
     println(Doge.class.class.class.fields)
+    ;       Doge  Pet Object (none)
+    println(Doge.super.super.super)
     
     arr = [1,2,2,4]
     arr[2]++

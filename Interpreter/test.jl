@@ -1,8 +1,24 @@
-import 'lib_src/print.jl'
+
+
+class Test1 {
+    field x
+    def new() {}
+}
+
+def test(a,b,c) {
+    a+1, b+2, c+3
+}
 
 def main {
-	println(1 is Int)
-    println(1 is Float)
-    println(1.1 is Int)
-    println(1.1 is Float)
+    test1 = Test1.new()
+    
+    {test1.x, y, z} = test(1, 2, 3)
+    ;print(test1.x)
+    ;print(y)
+    ;print(z)
+    
+    arr = [1, 2, 3, 4, 5]
+    
+    print((test1.x, y, z)[1])
+
 }

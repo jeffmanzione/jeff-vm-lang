@@ -16,10 +16,14 @@
 
 #define DEFAULT_COMPOSITE_HT_SZ 128
 
+#define CLASS_CLASS_NAME  "Class"
+#define OBJECT_CLASS_NAME  "Object"
+
 typedef struct _Composite Composite;
 typedef struct _Composite Class;
 
 extern Class *class_class;
+extern Class *object_class;
 
 typedef struct _Composite {
   int is_class;

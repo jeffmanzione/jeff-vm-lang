@@ -30,7 +30,9 @@
 #define RETURN_KEYWORD     "return"
 #define CLASS_KEYWORD      "class"
 #define FIELD_KEYWORD      "field"
+#define METHOD_KEYWORD     "method"
 #define IMPORT_KEYWORD     "import"
+#define FROM_KEYWORD       "from"
 #define NEW_KEYWORD        "new"
 #define SELF_KEYWORD       "self"
 #define SUPER_KEYWORD      "super"
@@ -87,6 +89,7 @@ void parse_line(Parser *, FILE *);
 
 void parse_exp(Parser *, FILE *);
 int parse_exp_tuple(Parser *, FILE *);
+void parse_exp_anon_fun(Parser *, FILE *);
 void parse_exp_for(Parser *, FILE *);
 void parse_exp_while(Parser *, FILE *);
 void parse_exp_if(Parser *, FILE *);

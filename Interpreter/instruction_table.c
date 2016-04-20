@@ -55,7 +55,7 @@ void register_instructions_here() {
   REGISTER_Adr(IFN, "ifn")
   REGISTER(ANEW, "anew")
   REGISTER(AADD, "aadd")
-  REGISTER(AGET, "aget")
+  REGISTER(IGET, "iget")
   REGISTER(ASET, "aset")
   REGISTER(AENQ, "aenq")
   REGISTER(ADEQ, "adeq")
@@ -85,6 +85,9 @@ void register_instructions_here() {
   REGISTER(ISA, "isa")
   REGISTER(IST, "ist")
   REGISTER(TUPL, "tupl")
+  //REGISTER(TGET, "tget")
+  REGISTER_Adr(PGET, "pget")
+  REGISTER(PCALL, "pcall")
 }
 
 int read_word_prog(Word *word, char line[], int index) {
@@ -269,4 +272,8 @@ void it_read_instruction(Word word, char line[], Instruction *ins, char ***ids,
       break;
   }
 
+}
+
+InsType it_instruction_type(Op op) {
+  return global_it.instruction_ids[op].type;
 }

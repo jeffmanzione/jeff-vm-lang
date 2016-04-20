@@ -1,7 +1,7 @@
-import 'lib_src/math.jl'
-import 'lib_src/print.jl'
-import 'lib_src/sort.jl'
-import 'lib_src/array.jl'
+import 'lib/src/default/math.jl'
+import 'lib/src/default/print.jl'
+import 'lib/src/default/sort.jl'
+import 'lib/src/default/array.jl'
 
 def helper1
 def helper2
@@ -21,10 +21,10 @@ def main {
     println(arr[1])
     
     i = 1
-    println(i)        ; 1
+    println(i)      ; 1
     println(i++)    ; 1
     println(++i)    ; 3
-    println(i)        ; 3
+    println(i)      ; 3
     unsorted = 'floccinaucinihilipilification'    
     qsort(unsorted)
     print_strln(unsorted)

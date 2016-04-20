@@ -94,6 +94,7 @@ typedef struct _FileInfo {
 } FileInfo;
 
 FileInfo file_info(const char fn[]);
+FileInfo file_info_file(FILE *tmp_file);
 
 void file_info_finalize(FileInfo fi);
 

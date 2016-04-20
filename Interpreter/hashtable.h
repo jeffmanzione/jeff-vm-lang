@@ -14,7 +14,7 @@ typedef struct _List H_List;
 
 typedef struct _List {
   char *id;
-  Object *obj;
+  void *obj;
   H_List *next;
 } H_List;
 
@@ -23,11 +23,10 @@ typedef struct {
   H_List **table; /* the table elements */
 } Hashtable;
 
-Hashtable *hashtable_create(int size);
-unsigned int hash(const Hashtable *hashtable, const char *str);
-Object *hashtable_lookup(const Hashtable *hashtable, const char *str);
-int hashtable_insert(Hashtable *hashtable, const char *str, Object *obj);
-void hashtable_free(Hashtable *hashtable, Deleter del);
-void hashtable_iterate(Hashtable *hashtable, HT_Action act);
+Hashtable    *hashtable_create(int size);
+void         *hashtable_lookup(const Hashtable *hashtable, const char *str);
+int           hashtable_insert(Hashtable *hashtable, const char *str, void *obj);
+void          hashtable_iterate(Hashtable *hashtable, HT_Action act);
+void          hashtable_free(Hashtable *hashtable, Deleter del);
 
 #endif /* HASHTABLE_H_ */

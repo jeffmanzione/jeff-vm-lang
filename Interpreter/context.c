@@ -50,6 +50,8 @@ Object *context_lookup_unchecked(const char id[], Context *context) {
   if (NULL == context)
     return NULL;
 
+
+//  printf("%p\n", context->table);fflush(stdout);
   Object *val = hashtable_lookup(context->table, id);
 
   if (NULL == val && FALSE == context->new_ip) {

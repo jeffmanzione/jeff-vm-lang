@@ -31,6 +31,16 @@ void queue_shallow_delete(Queue *queue) {
   }
 }
 
+void queue_iterate(Queue *queue, Q_Action act) {
+  NULL_CHECK(queue, "Queue was null!")
+  QueueElement *elt = queue->head;
+
+  while (NULL != elt) {
+    act(elt->value);
+    elt = elt->next;
+  }
+}
+
 void *queue_peek(const Queue *queue) {
   if (NULL == queue->head) {
     return NULL;
