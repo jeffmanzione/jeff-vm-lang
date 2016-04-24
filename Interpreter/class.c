@@ -25,6 +25,7 @@ void class_init(InstructionMemory *instructs) {
   composite_set(object_class, "class", class_obj);
   instructions_insert_class(instructs, object_class);
 
+  composite_class_add_field(object_class, "class");
 
   class_class = composite_class_new(CLASS_CLASS_NAME, object_class);
   class_class->class = class_class;
@@ -70,8 +71,6 @@ Class *composite_class_new(const char class_name[], Class *super_class) {
     super.type = COMPOSITE;
   }
   composite_set(class, "super", super);
-
-  composite_class_add_field(class, "class");
 
   class->methods = hashtable_create(DEFAULT_COMPOSITE_HT_SZ);
 
@@ -155,11 +154,10 @@ Class *composite_class_load_bin(FILE *stream, InstructionMemory *ins_mem) {
     fread(&num_args, sizeof(int), 1, stream);
     composite_class_add_method(class, buff, num_args);
     fread(&adr, sizeof(int), 1, stream);
-    Object *int_obj = NEW(int_obj, Object)
-    int_obj->type = INTEGER;
-    int_obj->int_value = adr;
-
-    hashtable_insert(class->methods, buff, int_obj);
+    MethodInfo *method_info = NEW(method_info, MethodInfo)
+    method_info->address = adr;
+    method_info->num_args = num_args;
+    hashtable_insert(class->methods, buff, method_info);
   }
 
   return class;
@@ -206,6 +204,11 @@ Class *composite_class_load_src(char src[], InstructionMemory *ins_mem) {
     advance_to_next(&end, ',');
     start = ++end;
     composite_class_add_method(class, buff, num_args);
+
+    MethodInfo *method_info = NEW(method_info, MethodInfo)
+    method_info->num_args = num_args;
+    hashtable_insert(class->methods, buff, method_info);
+
   }
 
   return class;
@@ -246,7 +249,6 @@ void composite_class_save_bin(FILE *file, Class *class,
   class_name = object_to_string(
       *composite_get(composite_get(class, "super")->comp, "name"));
   fwrite(class_name, strlen(class_name) + 1, 1, file);
-  free(class_name);
 
   unsigned char n = 0;
 
@@ -264,14 +266,20 @@ void composite_class_save_bin(FILE *file, Class *class,
   for (i = 0; i < array_size(methods); i++) {
     Array *arr = deref(array_get(methods, i)).array;
     char *method_name = object_to_string(deref(array_get(arr, 0)));
-    int num_args = deref(array_get(arr, 1)).int_value;
+
+    MethodInfo *mi = hashtable_lookup(class->methods, method_name);
+    NULL_CHECK(mi, "MethodInfo for method was not found in table!")
+    //printf("%s.%s(%d)\n", class_name, method_name, mi->num_args);
+    int num_args = mi->num_args;
+
     fwrite(method_name, strlen(method_name) + 1, 1, file);
     fwrite(&num_args, sizeof(int), 1, file);
-    int adr = ((Object *)hashtable_lookup(class->methods, method_name))->int_value;
+    int adr = mi->address;
     fwrite(&adr, sizeof(int), 1, file);
     free(method_name);
   }
   fwrite(&n, 1, 1, file);
+  free(class_name);
 }
 
 void composite_class_delete(Class *class) {
@@ -296,7 +304,7 @@ Composite *composite_new(/*Class*/Composite *class) {
 void composite_delete(Composite *composite) {
   hashtable_free(composite->fields, object_delete);
   if (composite->methods) {
-    hashtable_free(composite->methods, object_delete);
+    hashtable_free(composite->methods, free);
   }
   free(composite);
 }

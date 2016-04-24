@@ -24,8 +24,8 @@ typedef struct _Stack {
 
 int    stack_init(Stack *stack, size_t capacity);
 void   stack_finalize(Stack *stack);
-void   push_stack(Stack *stack, Object obj);
-Object pop_stack(Stack *stack);
-Object peek_stack(Stack *stack);
+void   stack_push(Stack *stack, Object obj);
+Object stack_pop(Stack *stack);
+Object stack_peek(Stack *stack);
 
 #endif /* STACK_H_ */

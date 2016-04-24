@@ -26,19 +26,19 @@ void stack_finalize(Stack *stack) {
   free(stack->tape);
 }
 
-void push_stack(Stack *stack, Object obj) {
+void stack_push(Stack *stack, Object obj) {
   CHECK(stack->capacity == stack->sp, "Stack Overflow!")
   stack->tape[stack->sp++] = obj;
 }
 
-Object pop_stack(Stack *stack) {
+Object stack_pop(Stack *stack) {
   //printf("> %d\n", stack->sp);
   //fflush(stdout);
   CHECK(0 == stack->sp, "Stack Underflow!")
   return stack->tape[--stack->sp];
 }
 
-Object peek_stack(Stack *stack) {
+Object stack_peek(Stack *stack) {
   CHECK(0 == stack->sp, "Stack Underflow!")
   return stack->tape[stack->sp - 1];
 }

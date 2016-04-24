@@ -65,7 +65,7 @@ void execute_fun_ptr(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
 
 Object stack_pull(Stack *stack) {
-  return deref(pop_stack(stack));
+  return deref(stack_pop(stack));
 }
 
 int instructions_init(InstructionMemory *instructs, size_t capacity) {
@@ -168,7 +168,7 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
         EXIT_WITH_MSG("NOT IMPLEMENTED PUSH!");
       }
       val.type = ins.type;
-      push_stack(stack, val);
+      stack_push(stack, val);
       break;
     case (PUSHM):
       // TODO
@@ -179,21 +179,21 @@ int execute(const Instruction ins, InstructionMemory *ins_mem,
 
       val = string_create((char *) (ins_mem->ins + ins.adr));
 
-      push_stack(stack, val);
+      stack_push(stack, val);
       //printf("%s\n", str);
       break;
     case (POP):
       stack_pull(stack);
       break;
     case (FLIP):
-      first = pop_stack(stack);
-      second = pop_stack(stack);
-      push_stack(stack, first);
-      push_stack(stack, second);
+      first = stack_pop(stack);
+      second = stack_pop(stack);
+      stack_push(stack, first);
+      stack_push(stack, second);
       break;
     case (SWAP):
-      first = pop_stack(stack);
-      second = pop_stack(stack);
+      first = stack_pop(stack);
+      second = stack_pop(stack);
       CHECK(!(REFERENCE == first.type && REFERENCE == second.type),
           "Both entries must be references for swap.")
       tmp = *first.ref;
@@ -331,7 +331,7 @@ void execute_tuple(const Instruction ins, InstructionMemory *ins_mem,
   switch (ins.op) {
     case (TUPL):
       tup = object_tuple_get(val.int_value, get_my_obj);
-      push_stack(stack, tup);
+      stack_push(stack, tup);
       break;
     case (IGET): // indexable[i]
     case (TGET):
@@ -339,10 +339,10 @@ void execute_tuple(const Instruction ins, InstructionMemory *ins_mem,
       if (TUPLE == tup.type) {
         CHECK(val.int_value >= tup.tuple_size,
             "Cannot index out of tuple bounds for TGET")
-        push_stack(stack, tup.tuple_elements[val.int_value]);
+        stack_push(stack, tup.tuple_elements[val.int_value]);
       } else if (ARRAY == tup.type) {
         new = array_get(tup.array, val.int_value);
-        push_stack(stack, new);
+        stack_push(stack, new);
       } else
         EXIT_WITH_MSG("Expected type tuple for TGET")
 
@@ -362,7 +362,7 @@ void execute_unary(const Instruction ins, InstructionMemory *ins_mem,
       } else {
         val = NONE_OBJECT;
       }
-      push_stack(stack, val);
+      stack_push(stack, val);
       break;
 
     case (PRINT):
@@ -373,41 +373,41 @@ void execute_unary(const Instruction ins, InstructionMemory *ins_mem,
     case (HASH):
       val.int_value = hash_code(val, program_state(ins_mem, context, stack));
       val.type = INTEGER;
-      push_stack(stack, val);
+      stack_push(stack, val);
       break;
     case (TOI):
       val.int_value = (int64_t) NUM_VAL(val);
       val.type = INTEGER;
-      push_stack(stack, val);
+      stack_push(stack, val);
       break;
     case (TOF):
       val.float_value = (float96_t) NUM_VAL(val);
       val.type = FLOATING;
-      push_stack(stack, val);
+      stack_push(stack, val);
       break;
     case (ISI):
       val = (INTEGER == val.type) ? TRUE_OBJECT : NONE_OBJECT;
-      push_stack(stack, val);
+      stack_push(stack, val);
       break;
     case (ISF):
       val = (FLOATING == val.type) ? TRUE_OBJECT : NONE_OBJECT;
-      push_stack(stack, val);
+      stack_push(stack, val);
       break;
     case (ISC):
       val = (CHARACTER == val.type) ? TRUE_OBJECT : NONE_OBJECT;
-      push_stack(stack, val);
+      stack_push(stack, val);
       break;
     case (ISO):
       val = (COMPOSITE == val.type) ? TRUE_OBJECT : NONE_OBJECT;
-      push_stack(stack, val);
+      stack_push(stack, val);
       break;
     case (ISA):
       val = (ARRAY == val.type) ? TRUE_OBJECT : NONE_OBJECT;
-      push_stack(stack, val);
+      stack_push(stack, val);
       break;
     case (IST):
       val = (TUPLE == val.type) ? TRUE_OBJECT : NONE_OBJECT;
-      push_stack(stack, val);
+      stack_push(stack, val);
       break;
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_unary!")
@@ -416,14 +416,15 @@ void execute_unary(const Instruction ins, InstructionMemory *ins_mem,
 
 void execute_unary_ref(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  Object val = pop_stack(stack);
+  Object val = stack_pop(stack);
   switch (ins.op) {
     case (DUP):
-      push_stack(stack, val);
-      push_stack(stack, val);
+      stack_push(stack, val);
+      stack_push(stack, val);
+      //printf("duped val = ");object_print(val, stdout); printf("\n");
       break;
     case (DREF):
-      push_stack(stack, deref(val));
+      stack_push(stack, deref(val));
       break;
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_unary!")
@@ -479,7 +480,7 @@ void execute_binary(const Instruction ins, InstructionMemory *ins_mem,
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_binary!")
   }
-  push_stack(stack, new);
+  stack_push(stack, new);
 }
 
 void execute_var_len_help(int num_args, Stack *stack) {
@@ -536,11 +537,11 @@ void execute_array(const Instruction ins, InstructionMemory *ins_mem,
     case (ANEW): // [ ... ]
       new.array = array_create();
       new.type = ARRAY;
-      push_stack(stack, new);
+      stack_push(stack, new);
       break;
     case (AADD):
       second = stack_pull(stack);
-      array_obj = deref(peek_stack(stack));
+      array_obj = deref(stack_peek(stack));
       //printf("type=%d\n", second.type);
       CHECK(ARRAY != array_obj.type,
           "Tried to manipulate something not an array.")
@@ -606,7 +607,7 @@ void execute_array_unary(const Instruction ins, InstructionMemory *ins_mem,
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_array_unary!")
   }
-  push_stack(stack, new);
+  stack_push(stack, new);
 }
 
 void execute_array_binary(const Instruction ins, InstructionMemory *ins_mem,
@@ -633,7 +634,7 @@ void execute_array_binary(const Instruction ins, InstructionMemory *ins_mem,
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_array_binary!")
   }
-  push_stack(stack, new);
+  stack_push(stack, new);
 }
 
 void execute_array_ternary(const Instruction ins, InstructionMemory *ins_mem,
@@ -736,7 +737,7 @@ void execute_lookup(const Instruction ins, InstructionMemory *ins_mem,
         val.type = REFERENCE;
         val.ref = val_ptr;
       }
-      push_stack(stack, val);
+      stack_push(stack, val);
       //printf("Getting value of '%s' which is of %d.\n", ins.id, val_ptr->type); fflush(stdout);
       break;
     case (SET):
@@ -747,7 +748,7 @@ void execute_lookup(const Instruction ins, InstructionMemory *ins_mem,
       break;
     case (RSET):
       val = stack_pull(stack);
-      ref = pop_stack(stack);
+      ref = stack_pop(stack);
       if (NONE == ref.type) {
         EXIT_WITH_MSG("Attempting to assign value to null pointer.")
       } else {
@@ -769,7 +770,7 @@ void execute_composites(const Instruction ins, InstructionMemory *ins_mem,
       break;
     case (CLSG):
       obj = instructions_get_class_by_id(ins_mem, ins.int_val);
-      push_stack(stack, obj);
+      stack_push(stack, obj);
       break;
     case (OCALL):
     case (OGET):
@@ -783,79 +784,111 @@ void execute_composites(const Instruction ins, InstructionMemory *ins_mem,
 }
 
 void ocall_fun_helper(const char fun_name[], InstructionMemory *ins_mem,
-    Context **context, Object comp_obj, Class *class) {
-  int adr;
-  *context = context_open(*context);
-  (*context)->ip = NEW((*context)->ip, int)
+    Context **context, Stack *stack, Object comp_obj, Class *class,
+    int expected_num_args) {
 
-  (*context)->new_ip = TRUE;
   //printf("Calling %p\n", get(comp_obj.comp->class->methods, fun_name));
   //fflush(stdout);
-  Object *adr_obj = hashtable_lookup(class->methods, fun_name);
 
-  while (NULL == adr_obj) {
+  int is_new = MATCHES(fun_name, "new");
+  int method_exists = TRUE;
+
+  MethodInfo *mi = hashtable_lookup(class->methods, fun_name);
+
+  while (NULL == mi || expected_num_args != mi->num_args) {
     Object *super = composite_get(class, "super");
-    CHECK(NONE == super->type, "Object does not support specified method!")
 
+    if (NONE == super->type) {
+      method_exists = FALSE;
+      if (!is_new || expected_num_args > 0) {
+        EXIT_WITH_MSG("Object does not support specified method with that "
+            "number of arguments!")
+      }
+      break;
+    }
     class = super->comp;
-    adr_obj = hashtable_lookup(class->methods, fun_name);
+    mi = hashtable_lookup(class->methods, fun_name);
   }
-
-  adr = adr_obj->int_value;
-
-  context_set("self", comp_obj, *context);
-  context_set("super", comp_obj, *context);
-  CHECK(FAILURE == adr, "No known label.");
-  *((*context)->ip) = adr;
+  if (method_exists) {
+    int adr;
+    *context = context_open(*context);
+    (*context)->ip = NEW((*context)->ip, int)
+    (*context)->new_ip = TRUE;
+    context_set("self", comp_obj, *context);
+    context_set("super", comp_obj, *context);
+    adr = mi->address;
+    CHECK(FAILURE == adr, "No known label.");
+    *((*context)->ip) = adr;
+  } else {
+    stack_push(stack, comp_obj);
+  }
 }
 
 void ocall_fun(const char fun_name[], InstructionMemory *ins_mem,
-    Context **context, Object comp_obj) {
-  ocall_fun_helper(fun_name, ins_mem, context, comp_obj, comp_obj.comp->class);
+    Context **context, Stack *stack, Object comp_obj, int num_args) {
+  ocall_fun_helper(fun_name, ins_mem, context, stack, comp_obj,
+      comp_obj.comp->class, num_args);
 }
 
 void ocall_context(const Instruction ins, InstructionMemory *ins_mem,
-    Context **context, Object comp_obj) {
-  ocall_fun(ins.id, ins_mem, context, comp_obj);
+    Context **context, Stack *stack, Object comp_obj, int num_args) {
+  ocall_fun(ins.id, ins_mem, context, stack, comp_obj, num_args);
 }
 
 void scall_context(const Instruction ins, InstructionMemory *ins_mem,
-    Context **context, Object comp_obj) {
-  ocall_fun_helper(ins.id, ins_mem, context, comp_obj,
-      composite_get(comp_obj.comp->class, "super")->comp);
+    Context **context, Stack *stack, Object comp_obj, int num_args) {
+  ocall_fun_helper(ins.id, ins_mem, context, stack, comp_obj,
+      composite_get(comp_obj.comp->class, "super")->comp, num_args);
 }
 
 void execute_composites_id(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack) {
-  Object obj = stack_pull(stack), to_get;
-
+  Object to_get;
+  Object args_obj;
   Object new, *tmp;
-
+  int num_args = 0;
   Composite *comp;
 //char fun_name[ID_SZ];
+
+  if (OGET != ins.op) {
+    args_obj = stack_pull(stack);
+    CHECK(INTEGER != args_obj.type, "num_args specifier must be an integer!")
+    CHECK(0 > args_obj.int_value, "num_args specifier must be >= 0!")
+    num_args = args_obj.int_value;
+  }
+
+  Object obj = stack_pull(stack);
+
   CHECK(COMPOSITE != obj.type,
       "Can only perform composite operation on composite.")
   comp = obj.comp;
+
+  if (OGET != ins.op && 1 == num_args && 0 < stack->sp) {
+    Object peek = deref(stack_peek(stack));
+    if (TUPLE == peek.type) {
+      num_args = peek.tuple_size;
+    }
+  }
 
   switch (ins.op) {
     case (ONEW):
       //CHECK(TRUE != (obj.comp->is_class), "Tried to new something not a class!")
       new.type = COMPOSITE;
       new.comp = composite_new(obj.comp);
-      ocall_fun("new", ins_mem, context, new);
+      ocall_fun("new", ins_mem, context, stack, new, num_args);
       break;
     case (OCALL):
-      ocall_context(ins, ins_mem, context, obj);
+      ocall_context(ins, ins_mem, context, stack, obj, num_args);
       break;
     case (SCALL):
-      scall_context(ins, ins_mem, context, obj);
+      scall_context(ins, ins_mem, context, stack, obj, num_args);
       break;
     case (OGET):
       tmp = composite_get_even_if_not_present(comp, ins.id);
       NULL_CHECK(tmp, "Class does not support this field!")
       to_get = to_ref(tmp);
 
-      push_stack(stack, to_get);
+      stack_push(stack, to_get);
       break;
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_composites_id!")
@@ -870,7 +903,7 @@ void execute_fun_ptr(const Instruction ins, InstructionMemory *ins_mem,
       obj.type = FUNCTION;
       obj.address.namespace_id = 0;
       obj.address.index = ins.adr;
-      push_stack(stack, obj);
+      stack_push(stack, obj);
       break;
     case (PCALL):
       obj = stack_pull(stack);

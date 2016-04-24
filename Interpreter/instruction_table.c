@@ -72,7 +72,7 @@ void register_instructions_here() {
   REGISTER(SWAP, "swap")
   REGISTER_Id(OGET, "oget")
   REGISTER_Id(OCALL, "ocall")
-  REGISTER(ORET, "oret")
+  //REGISTER(ORET, "oret")
   REGISTER(ONEW, "onew")
   REGISTER_Id(SCALL, "scall")
   REGISTER_Adr(CLSG, "clsg")

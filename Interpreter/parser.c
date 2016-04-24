@@ -179,10 +179,10 @@ int nextIsAndSecondIsntAndRemove(Parser *parser, TokenType first,
   return TRUE;
 }
 
-char *KEYWORDS[] = { DEF_KEYWORD, FUN_KEYWORD, IF_KEYWORD, ELSE_KEYWORD,
-WHILE_KEYWORD, FOR_KEYWORD, BREAK_KEYWORD, RETURN_KEYWORD, AS_KEYWORD,
-IS_KEYWORD, NONE_KEYWORD, TRUE_KEYWORD, FALSE_KEYWORD, FUN_KEYWORD,
-CLASS_KEYWORD, FIELD_KEYWORD, IMPORT_KEYWORD, NEW_KEYWORD };
+char *KEYWORDS[] = { DEF_KEYWORD, FUN_KEYWORD, IF_KEYWORD, THEN_KEYWORD,
+ELSE_KEYWORD, WHILE_KEYWORD, FOR_KEYWORD, BREAK_KEYWORD, RETURN_KEYWORD,
+AS_KEYWORD, IS_KEYWORD, NONE_KEYWORD, TRUE_KEYWORD, FALSE_KEYWORD,
+FUN_KEYWORD, CLASS_KEYWORD, FIELD_KEYWORD, IMPORT_KEYWORD, NEW_KEYWORD };
 
 int is_keyword(const char word[]) {
   int i;
@@ -289,15 +289,16 @@ void parse_elements(Parser *parser, FILE *out) {
     child_parser.tok_q = &child_queue;
     child_parser.fi_in = &child_fi;
     strcrepl(fn, '/', '_');
-    fn[strlen(fn_token.text) - 5] = '\0';
+
+    *strchr(fn, '.') = '\0';
     child_parser.in_name = fn;
+
     parse_top_level(&child_parser, out);
+
     file_info_finalize(child_fi);
 
   } else {
-    //printf("WAS %d\nLine %d(%d)\n", tok->type, tok->line, tok->col);
-    //fflush(stdout);
-    //parser_exit(parser, tok, "Expected "DEF_KEYWORD" or "CLASS_KEYWORD".");
+    // This will quit the parser.
     parser_exit(parser, tok, "Expected "DEF_KEYWORD" or "CLASS_KEYWORD".");
   }
 }
@@ -313,6 +314,9 @@ void parse_class(Parser *parser, FILE *out) {
       "Expected class name.");
 
   Class *super;
+
+  PARSER_CHECK(NULL != hashtable_lookup(parser->classes, class_name.text),
+      &class_name, "Class already exists!")
 
   if (nextIsAndRemove(parser, COLON)) {
     Token super_class_name = *((Token *) queue_peek(parser->tok_q));
@@ -404,6 +408,10 @@ void parse_class_method(Parser *parser, FILE *out, Composite *class,
 
   method_to_label(class_name, def_name.text, label);
 
+  PARSER_CHECK(NULL != hashtable_lookup(parser->fun_names, label), &def_name,
+      "Class already has member with this method name. "
+          "Method overloading is not supported!")
+
   hashtable_insert(parser->fun_names, label, (Object *) sizeof(Object));
   write_label(label, out);
 
@@ -419,14 +427,17 @@ void parse_class_method(Parser *parser, FILE *out, Composite *class,
     PARSER_CHECK(!nextIsAndRemove(parser, LPAREN), queue_peek(parser->tok_q),
         "Expected ( after : in super constructor!")
 
+    int super_num_args = 0;
+
     if (!nextIsAndRemove(parser, RPAREN)) {
-      parse_exp_tuple(parser, out);
+      super_num_args = parse_exp_tuple(parser, out);
     }
 
     PARSER_CHECK(!nextIsAndRemove(parser, RPAREN), queue_peek(parser->tok_q),
         "Expected ) to end super constructor!")
 
     write_ins_id(GET, "self", out);
+    write_ins_value(PUSH, super_num_args, out);
     write_ins_id(SCALL, NEW_KEYWORD, out);
     write_ins_default(POP, out);
   }
@@ -452,6 +463,9 @@ void parse_fun(Parser *parser, FILE *out) {
   def_name = *((Token *) queue_peek(parser->tok_q));
 
   PARSER_CHECK(!nextIsAndRemove(parser, WORD), &def_name, "Expected fun name.");
+
+  PARSER_CHECK(NULL != hashtable_lookup(parser->fun_names, def_name.text),
+      &def_name, "Duplicate function names (i.e., overloading) not allowed!")
 
   hashtable_insert(parser->fun_names, def_name.text, (Object *) sizeof(Object));
 
@@ -499,9 +513,11 @@ int parse_fun_arguments_helper(Parser *parser, FILE *out, int index) {
     num_args = 1 + parse_fun_arguments_helper(parser, out, index + 1);
   }
 
-//printf("INDEX=%d, NUM_ARGS=%d\n", index, num_args);
+  //printf("INDEX=%d, NUM_ARGS=%d\n", index, num_args);
   if (index > 0 || num_args > 1) {
-    write_ins_default(DUP, out);
+    if (0 < index) {
+      write_ins_default(DUP, out);
+    }
     // Note that num_args is not necessarily the total number of args at this point.
     write_ins_value(PUSH, index, out);
     //write_ins_default(FLIP, out);
@@ -745,6 +761,9 @@ void parse_exp_if(Parser *parser, FILE *out) {
   }
 
 //write_ins_default(OPEN, out);
+
+  // Optional then
+  nextIsWordAndRemove(parser, THEN_KEYWORD);
 
   parse_exp_if(parser, out);
 
@@ -1358,14 +1377,18 @@ void parse_exp_obj_item_helper(Parser *parser, FILE *prev_buffer,
 
   if (nextIsAndRemove(parser, LPAREN)) {
     Token *tok_next = queue_peek(parser->tok_q);
+    size_t tuple_size = 0;
     if (RPAREN != tok_next->type) {
-      parse_exp_tuple(parser, total_accum);
+      tuple_size = parse_exp_tuple(parser, total_accum);
     }
 
     PARSER_CHECK(!nextIsAndRemove(parser, RPAREN), queue_peek(parser->tok_q),
         "Expected ). 2");
 
     append(total_accum, prev_buffer);
+
+    write_ins_value(PUSH, tuple_size, total_accum);
+
     if (MATCHES(item.text, NEW_KEYWORD)) {
       write_ins_default(ONEW, total_accum);
     } else if (MATCHES(SUPER_KEYWORD, prev_word)) {
@@ -1434,12 +1457,15 @@ void parse_exp_array_dec(Parser *parser, FILE *out) {
   write_ins_default(ANEW, out);
 
   while (RBRAC != (tok = queue_peek(parser->tok_q))->type) {
+    remove_if_present(parser, ENDLINE);
     parse_exp_anon_fun(parser, out);
     write_ins_default(AADD, out);
     if (!nextIsAndRemove(parser, COMMA)) {
       break;
     }
   }
+
+  remove_if_present(parser, ENDLINE);
 
   PARSER_CHECK(!nextIsAndRemove(parser, RBRAC), queue_peek(parser->tok_q),
       "Expected ].");
@@ -1489,8 +1515,28 @@ void parse_exp_num_or_id(Parser *parser, FILE *out) {
           tok->text))->comp;
       queue_remove(parser->tok_q);
       char *class_name = object_to_string(*composite_get(class, "name"));
+
+      int is_new = FALSE;
+      size_t tuple_size = 0;
+      if (nextIsAndRemove(parser, LPAREN)) {
+        is_new = TRUE;
+        Token *tok_next = queue_peek(parser->tok_q);
+        if (RPAREN != tok_next->type) {
+          tuple_size = parse_exp_tuple(parser, out);
+        }
+
+        PARSER_CHECK(!nextIsAndRemove(parser, RPAREN),
+            queue_peek(parser->tok_q), "Expected ). 2");
+      }
+
       write_ins_id(CLSG, class_name, out);
       free(class_name);
+
+      if (is_new) {
+        write_ins_value(PUSH, tuple_size, out);
+        write_ins_default(ONEW, out);
+      }
+
     } else {
       queue_remove(parser->tok_q);
       if (nextIsAndRemove(parser, LPAREN)) {
@@ -1540,7 +1586,7 @@ void parse_exp_num_or_id(Parser *parser, FILE *out) {
     write_ins_value_str(PUSH, tok->text, out);
     queue_remove(parser->tok_q);
   } else {
-    //printf("WAS %d\nLine %d(%d)\n", tok->type, tok->line, tok->col);
+    printf("WAS %d\nLine %d(%d)\n", tok->type, tok->line, tok->col);
     parser_exit(parser, tok, "Unexpected token. Expected word or number. 1");
   }
 

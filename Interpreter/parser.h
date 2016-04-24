@@ -23,6 +23,7 @@
 #define FUN_KEYWORD        "function"
 #define DEF_KEYWORD        "def"
 #define IF_KEYWORD         "if"
+#define THEN_KEYWORD       "then"
 #define ELSE_KEYWORD       "else"
 #define WHILE_KEYWORD      "while"
 #define FOR_KEYWORD        "for"

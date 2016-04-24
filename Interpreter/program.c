@@ -51,10 +51,15 @@ void set_method_address(InstructionMemory *ins_mem, char fun_id[]) {
 
   Object class = instructions_get_class_object_by_name(ins_mem, class_name);
 
-  Object *int_obj = NEW(int_obj, Object)
-  int_obj->type = INTEGER;
-  int_obj->int_value = ins_mem->index - 1;
-  hashtable_insert(class.comp->methods, fun_name, int_obj);
+  MethodInfo *mi = hashtable_lookup(class.comp->methods, fun_name);
+
+  if (NULL == mi) {
+    printf("Method was null!\n");
+    mi = NEW(mi, MethodInfo)
+    hashtable_insert(class.comp->methods, fun_name, mi);
+  }
+  mi->address = ins_mem->index - 1;
+
 }
 
 int compile_jm(FILE *in, InstructionMemory *ins_mem, char **ids) {

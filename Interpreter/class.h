@@ -33,6 +33,11 @@ typedef struct _Composite {
   Hashtable *fields;
 } Composite;
 
+typedef struct {
+    uint16_t num_args;
+    uint64_t address; // Not known until right before execution.
+} MethodInfo;
+
 // Serialized forms
 
 void class_init(InstructionMemory *instructs);
