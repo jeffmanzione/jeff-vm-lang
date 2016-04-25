@@ -1,0 +1,248 @@
+class Map:Object:fields{class,table,size,} methods{new(1),map_hash(1),get(1),put(2),}
+
+@print_str
+        set     str
+        push    0
+        set     i
+@for_lib_src_default_print.jl_63
+        get     i
+        get     str
+        alen
+        lt
+        ifn     end_lib_src_default_print.jl_63
+        get     str
+        get     i
+        iget
+        print
+        get     i
+        push    1
+        add
+        set     i
+        jump    for_lib_src_default_print.jl_63
+@end_lib_src_default_print.jl_63
+        ret
+
+@println
+        set     var
+        get     var
+        print
+        push    '\n'
+        call    print_str
+        ret
+
+@print_strln
+        set     str
+        get     str
+        call    print_str
+        push    '\n'
+        call    print_str
+        ret
+
+@_Map_new
+        set     size
+        get     self
+        oget    table
+        anew
+        rset
+        get     self
+        oget    size
+        get     size
+        rset
+        get     self
+        oget    table
+        get     size
+        push    1
+        sub
+        anew
+        ains
+        get     self
+        ret
+
+@_Map_map_hash
+        set     key
+        get     key
+        hash
+        get     self
+        oget    size
+        mod
+        ret
+
+@_Map_get
+        set     key
+        get     key
+        get     self
+        ocall   map_hash
+        set     hv
+        get     self
+        oget    table
+        get     hv
+        iget
+        not
+        ifn     else_253
+        push    None
+        ret
+        jump    end_253
+@else_253
+@end_253
+        push    0
+        set     i
+@for_242
+        get     i
+        get     self
+        oget    table
+        get     hv
+        iget
+        alen
+        lt
+        ifn     end_242
+        get     key
+        get     self
+        oget    table
+        get     hv
+        iget
+        get     i
+        iget
+        push    0
+        iget
+        eq
+        ifn     else_220
+        get     self
+        oget    table
+        get     hv
+        iget
+        get     i
+        iget
+        push    1
+        iget
+        ret
+        jump    end_220
+@else_220
+@end_220
+        get     i
+        push    1
+        add
+        set     i
+        jump    for_242
+@end_242
+        push    None
+        ret
+        ret
+
+@_Map_put
+        dup
+        push    1
+        iget
+        set     value
+        dup
+        push    0
+        iget
+        set     key
+        get     key
+        get     self
+        ocall   map_hash
+        set     hv
+        get     self
+        oget    table
+        get     hv
+        iget
+        ifn     else_167
+        push    0
+        set     i
+@for_158
+        get     i
+        get     self
+        oget    table
+        get     hv
+        iget
+        alen
+        lt
+        ifn     end_158
+        get     key
+        get     self
+        oget    table
+        get     hv
+        iget
+        get     i
+        iget
+        push    0
+        iget
+        eq
+        ifn     else_136
+        get     self
+        oget    table
+        get     hv
+        iget
+        get     i
+        iget
+        push    1
+        iget
+        get     value
+        rset
+        ret
+        jump    end_136
+@else_136
+@end_136
+        get     i
+        push    1
+        add
+        set     i
+        jump    for_158
+@end_158
+        get     self
+        oget    table
+        get     hv
+        iget
+        push    0
+        get     key
+        get     value
+        push    2
+        tupl
+        ains
+        jump    end_167
+@else_167
+        get     self
+        oget    table
+        get     hv
+        iget
+        anew
+        get     key
+        get     value
+        push    2
+        tupl
+        aadd
+        rset
+@end_167
+        ret
+
+@main
+        push    64
+        clsg    Map
+        onew
+        set     map
+        push    'a'
+        push    2
+        push    2
+        tupl
+        get     map
+        ocall   put
+        push    'fish'
+        push    'kitten'
+        push    2
+        tupl
+        get     map
+        ocall   put
+        push    'a'
+        get     map
+        ocall   get
+        call    println
+        push    'fish'
+        get     map
+        ocall   get
+        call    println
+        push    'a'
+        get     map
+        ocall   get
+        call    println
+        push    0
+        exit
+
