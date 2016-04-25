@@ -762,12 +762,14 @@ void parse_exp_if(Parser *parser, FILE *out) {
 
 //write_ins_default(OPEN, out);
 
-  // Optional then
-  nextIsWordAndRemove(parser, THEN_KEYWORD);
-
   parse_exp_if(parser, out);
 
   write_ins_id_num(IFN, "else", num, parser, out);
+
+  remove_if_present(parser, ENDLINE);
+
+  // Optional then
+  nextIsWordAndRemove(parser, THEN_KEYWORD);
 
   remove_if_present(parser, ENDLINE);
 
