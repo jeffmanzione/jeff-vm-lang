@@ -8,8 +8,6 @@
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
-typedef struct _Context Context;
-
 #include "hashtable.h"
 #include "shared.h"
 
@@ -18,11 +16,12 @@ typedef struct _Context Context;
 typedef struct _Context {
   int *ip;
   int new_ip;
-  Context *parent;
+  Context *parent, *prev;
   Hashtable *table;
 //Object  *heap;
 } Context;
 
+Context *context_open_with_parent(Context *context, Context *parent);
 Context *context_open(Context *context);
 Context *context_close(Context *context);
 Object *context_lookup_unchecked(const char id[], Context *context);

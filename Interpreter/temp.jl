@@ -26,6 +26,7 @@ class Pet {
         self.name == other.name & self.say_msg == other.say_msg
         
     def to_s flatten(['Pet[', name, ']'])
+    
 }
 
 class Doge : Pet {

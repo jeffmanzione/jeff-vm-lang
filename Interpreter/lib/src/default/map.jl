@@ -1,4 +1,3 @@
-import lib.src.default.print
 
 class Map {
     field table, size
@@ -33,13 +32,4 @@ class Map {
         } else
             self.table[hv] = [(key, value)]
     }
-}
-
-def main {
-    map = Map.new(64)
-    map.put('a', 2)
-    map.put('fish', 'kitten')
-    println(map.get('a'))
-    println(map.get('fish'))
-    println(map.get('a'))
 }

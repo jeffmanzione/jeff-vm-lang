@@ -10,8 +10,13 @@
 #include <stdlib.h>
 
 Context *context_open(Context *context) {
+  return context_open_with_parent(context, context);
+}
+
+Context *context_open_with_parent(Context *context, Context *parent) {
   Context *new_context = NEW(new_context, Context)
-  new_context->parent = context;
+  new_context->parent = parent;
+  new_context->prev = context;
   new_context->table = hashtable_create(TABLE_SZ);
   if (NULL == context) {
     new_context->ip = NEW(new_context->ip, int)
@@ -20,10 +25,11 @@ Context *context_open(Context *context) {
     new_context->ip = context->ip;
   }
   return new_context;
+
 }
 
 Context *context_close(Context *context) {
-  Context *parent_context = context->parent;
+  Context *parent_context = context->prev;
   // TODO cleanup
   //free_table(context->table, object_delete);
   if (TRUE == context->new_ip) {
@@ -49,7 +55,6 @@ void context_set(const char id[], Object val, Context *context) {
 Object *context_lookup_unchecked(const char id[], Context *context) {
   if (NULL == context)
     return NULL;
-
 
 //  printf("%p\n", context->table);fflush(stdout);
   Object *val = hashtable_lookup(context->table, id);

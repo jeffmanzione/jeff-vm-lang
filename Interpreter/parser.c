@@ -194,14 +194,6 @@ int is_keyword(const char word[]) {
   return FALSE;
 }
 
-Parser *glob_parser;
-void write_classes_and_del(void *comp_obj) {
-  composite_class_save_src(glob_parser->top, ((Object *) comp_obj)->comp);
-  fprintf(glob_parser->top, "\n");
-// TODO
-//object_delete(comp_obj);
-}
-
 void parse(FileInfo *fi, Queue *queue, FILE *out) {
 // printf("parse()\n"); fflush(stdout);
   Parser parser;
@@ -220,7 +212,14 @@ void parse(FileInfo *fi, Queue *queue, FILE *out) {
   parse_top_level(&parser, tmp);
 
   hashtable_free(parser.fun_names, do_nothing);
-  glob_parser = &parser;
+
+  void write_classes_and_del(void *comp_obj) {
+    composite_class_save_src(parser.top, ((Object *) comp_obj)->comp);
+    fprintf(parser.top, "\n");
+    // TODO
+    //object_delete(comp_obj);
+  }
+
   hashtable_free(parser.classes, do_nothing);
   queue_deep_delete(&parser.classes_queue, write_classes_and_del);
   fprintf(out, "\n");
@@ -295,6 +294,9 @@ void parse_elements(Parser *parser, FILE *out) {
 
     parse_top_level(&child_parser, out);
 
+    //TODO Need to fix so don't have to do this
+    parser->classes_queue = child_parser.classes_queue;
+
     file_info_finalize(child_fi);
 
   } else {
@@ -337,7 +339,7 @@ void parse_class(Parser *parser, FILE *out) {
   class_obj->comp = class;
 
   parse_class_body(parser, out, class, class_name.text);
-//composite_class_print_sumary(class);
+//  composite_class_print_sumary(class);
   hashtable_insert(parser->classes, class_name.text, class_obj);
   queue_add(&parser->classes_queue, class_obj);
 }

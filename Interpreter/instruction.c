@@ -660,10 +660,15 @@ void execute_array_ternary(const Instruction ins, InstructionMemory *ins_mem,
 
 void call_context_adr(Address address, InstructionMemory *ins_mem,
     Context **context) {
-  int adr;
-  *context = context_open(*context);
-  (*context)->ip = NEW((*context)->ip, int)
+  call_context_adr_with_parent(address, ins_mem, context, *context);
   (*context)->new_ip = TRUE;
+}
+
+void call_context_adr_with_parent(Address address, InstructionMemory *ins_mem,
+    Context **context, Context *parent) {
+  int adr;
+  *context = context_open_with_parent(*context, parent);
+  (*context)->ip = NEW((*context)->ip, int)
   adr = address.index;
   CHECK(FAILURE == adr, "No known label.");
   *((*context)->ip) = adr;
@@ -903,13 +908,15 @@ void execute_fun_ptr(const Instruction ins, InstructionMemory *ins_mem,
       obj.type = FUNCTION;
       obj.address.namespace_id = 0;
       obj.address.index = ins.adr;
+      obj.parent_context = *context;
       stack_push(stack, obj);
       break;
     case (PCALL):
       obj = stack_pull(stack);
       CHECK(FUNCTION != obj.type,
           "Cannot treat a non-function pointer as a function.")
-      call_context_adr(obj.address, ins_mem, context);
+      call_context_adr_with_parent(obj.address, ins_mem, context,
+          obj.parent_context);
       break;
     default:
       EXIT_WITH_MSG("Unexpected instruction for execute_fun_ptr!")

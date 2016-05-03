@@ -26,6 +26,7 @@ typedef struct _ArrayList ArrayList;
 typedef struct ArrayList Array;
 typedef struct _Composite Composite;
 typedef struct _ProgramState ProgramState;
+typedef struct _Context Context;
 
 #define TRUE      1
 #define FALSE     0
@@ -90,7 +91,10 @@ typedef struct _Object {
     Array *array;
     Object *ref;
     Composite *comp;
-    Address address;
+    struct {
+        Address address;
+        Context *parent_context;
+    };
     struct {
       Object *tuple_elements;
       size_t tuple_size;
