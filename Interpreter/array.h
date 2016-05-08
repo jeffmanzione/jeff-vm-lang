@@ -32,4 +32,7 @@ Object array_get(Array * const, int);
 
 int array_size(const Array * const);
 int array_is_empty(const Array * const);
+
+bool array_is_string(const Array *const);
+
 #endif /* ARRAY_H_ */

@@ -333,6 +333,25 @@ Object *composite_get_even_if_not_present(Composite *composite,
 
 }
 
-int composite_has_field(const Composite *composite, const char field_name[]) {
+// TODO: This is implemented wrong!
+bool composite_has_field(const Composite *composite, const char field_name[]) {
   return NULL != hashtable_lookup(composite->fields, field_name);
+}
+
+bool composite_has_method(const Composite *composite, const char method_name[],
+    int num_args) {
+  Class *class;
+
+  MethodInfo *mi = hashtable_lookup(composite->class->methods, method_name);
+  while (NULL == mi || num_args != mi->num_args) {
+    Object *super = composite_get(composite->class, "super");
+
+    if (NONE == super->type) {
+      return FALSE;
+    }
+    class = super->comp;
+    mi = hashtable_lookup(class->methods, method_name);
+  }
+
+  return num_args == mi->num_args;
 }

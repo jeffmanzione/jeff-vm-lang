@@ -34,16 +34,16 @@ typedef struct _Namespace {
     size_t class_array_capacity;
     size_t classes_len;
   };
-  struct {
-    Namespace **children;
-    size_t children_array_capacity;
-    size_t children_len;
-  };
+//  struct {
+//    Namespace **children;
+//    size_t children_array_capacity;
+//    size_t children_len;
+//  };
 } Namespace;
 
 Namespace *namespace_create(const char name[], Instruction * const ins,
     size_t ins_len);
-void namespace_add_child(Namespace * const space, Namespace * const child);
+//void namespace_add_child(Namespace * const space, Namespace * const child);
 void namespace_add_class(Namespace * const space, Class * const class);
 Object namespace_search(Namespace * const space, Queue * const exts);
 void namespace_free(Namespace * const space);

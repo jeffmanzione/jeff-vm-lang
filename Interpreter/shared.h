@@ -8,11 +8,10 @@
 #ifndef SHARED_H_
 #define SHARED_H_
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
-#include <stdarg.h>
 
 #define max(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -28,8 +27,9 @@ typedef struct _Composite Composite;
 typedef struct _ProgramState ProgramState;
 typedef struct _Context Context;
 
-#define TRUE      1
-#define FALSE     0
+typedef enum {
+  FALSE, TRUE
+} bool;
 #define SUCCESS   1
 #define FAILURE  -1
 
@@ -82,29 +82,6 @@ typedef struct {
   uint32_t index;
 } Address;
 
-typedef struct _Object {
-  Type type;
-  union {
-    int64_t int_value;
-    float96_t float_value;
-    char char_value;
-    Array *array;
-    Object *ref;
-    Composite *comp;
-    struct {
-        Address address;
-        Context *parent_context;
-    };
-    struct {
-      Object *tuple_elements;
-      size_t tuple_size;
-    };
-  };
-} Object;
-
-Object NONE_OBJECT;
-extern Object TRUE_OBJECT;
-
 int is_whitespace(const char c);
 int ends_with(const char *str, const char *suffix);
 int starts_with(const char *str, const char *prefix);
@@ -112,29 +89,10 @@ int contains_char(const char str[], char c);
 void read_word_from_stream(FILE *stream, char *buff);
 void advance_to_next(char **ptr, const char c);
 void fill_str(char buff[], char *start, char *end);
-
-uint32_t hash_code(const Object, ProgramState);
-Object equals(Object, Object, ProgramState);
-Object equals_ptr(Object *, Object *, ProgramState);
-Object obj_is_a(Object type, Object to_test, ProgramState);
-
-Object to_ref(Object *obj);
-Object deref(Object obj);
-
-Object object_tuple(int64_t num_elts, ...);
-Object object_tuple_get(int64_t num_elts, ObjectProducer get_obj);
+char char_unesc(char u);
 
 int file_exist(char *filename);
 void append(FILE *head, FILE *tail);
-
-void object_print(const Object obj, FILE *out);
-void object_delete(void *);
-char *object_to_string(const Object obj);
-
-char *object_string_merge(const Object, const Object);
-
-Object string_create(const char str[]);
-char char_unesc(char u);
 
 void method_to_label(const char *class_name, const char method_name[],
     char *label);

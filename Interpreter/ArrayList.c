@@ -18,6 +18,7 @@ typedef struct _ArrayList {
   int current;
   int size;
   int increment_rate;
+  bool is_string;
   Object *Objects;
 } ArrayList;
 
@@ -70,6 +71,7 @@ void arraryCopy(void *dest, int dIndex, const void* src, int sIndex, int len,
 ArrayList *array_list_create() {
   ArrayList *list = NEW(list, ArrayList)
   initWithSize(list, 100);
+  list->is_string = TRUE;
   return list;
 }
 void initWithSize(ArrayList * const list, int size) {
@@ -88,6 +90,7 @@ void array_list_clear(ArrayList * const list) {
     list->Objects[list->current].type = NONE;
     list->current--;
   }
+  list->is_string = TRUE;
 }
 
 void array_list_set(ArrayList * const list, int index, Object e) {
@@ -98,7 +101,9 @@ void array_list_set(ArrayList * const list, int index, Object e) {
     ensure_capacity(list, index + 100);
     list->current = index;
   }
+  list->is_string = list->is_string && (CHARACTER == deref(e).type);
   list->Objects[index] = e;
+
 }
 
 Object array_list_get(ArrayList * const list, int index) {
@@ -131,6 +136,7 @@ void array_list_enqueue(ArrayList * const list, Object e) {
     wide(list);
     list->Objects[list->current] = e;
   }
+  list->is_string = list->is_string && (CHARACTER == deref(e).type);
 
   //array_print(list);
 }
@@ -171,6 +177,7 @@ void array_list_insert(ArrayList * const list, int index, Object e) {
     list->current = index;
   }
 
+  list->is_string = list->is_string && (CHARACTER == deref(e).type);
   list->Objects[index] = e;
 
 //  printf("\tlist->current = %d\n", list->current);
@@ -196,6 +203,10 @@ Object array_list_remove(ArrayList * const list, int index) {
       shift(list, index, 1, LEFT);
     }
     list->current--;
+
+    if (0 == list->current) {
+      list->is_string = TRUE;
+    }
 
     return to_remove;
   }
@@ -227,4 +238,8 @@ static void shift(ArrayList * const list, int index, int rooms, Shift dir) {
     arraryCopy(list->Objects, index, list->Objects, index + 1, rooms,
         list->current + 1, sizeof(Object));
   }
+}
+
+bool array_list_is_string(const ArrayList *const list) {
+  return list->is_string;
 }

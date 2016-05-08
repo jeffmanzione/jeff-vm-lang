@@ -10,6 +10,8 @@
 
 #include "command_line.h"
 #include "interpreter.h"
+#include "memory/memory.h"
+#include "memory/memory_shared.h"
 
 //#define IN_NAME     "out.jb"
 //#define TMP_NAME    "out.jm"
@@ -32,9 +34,20 @@ int main(int argc, char *argv[]) {
     HANDLE_SUCCESS()
   }
 
+  memory_init();
+  memory_set_policy(IMMEDIATE);
+
+  void error_handler(MemoryError *error) {
+    exit(-1);
+  }
+
+  memory_set_error_handler(error_handler);
+
   load_program(&clpi);
 
   cl_args_finalize(&clpi);
+
+  memory_free();
 
   return EXIT_SUCCESS;
 }

@@ -10,6 +10,7 @@
 
 #include "hashtable.h"
 #include "shared.h"
+#include "object.h"
 
 #define TABLE_SZ 128
 

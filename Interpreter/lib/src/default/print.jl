@@ -3,7 +3,9 @@ def print_str(str)
         print(str[i])
 
 def println(var) {
-	print(var)
+    if var is Object
+        print_str(var.to_s())
+    else print(var)
 	print_str('\n')
 }
 		

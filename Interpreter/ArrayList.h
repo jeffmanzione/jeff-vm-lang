@@ -12,6 +12,7 @@ typedef struct _ArrayList ArrayList;
 typedef struct _Object Object;
 
 #include "shared.h"
+#include "object.h"
 
 // public functions:
 ArrayList *array_list_create();
@@ -35,5 +36,7 @@ Object array_list_get(ArrayList* const, int);
 
 int array_list_size(const ArrayList* const);
 int array_list_is_empty(const ArrayList* const);
+
+bool array_list_is_string(const ArrayList *const list);
 
 #endif /* ARRAYLIST_H_ */

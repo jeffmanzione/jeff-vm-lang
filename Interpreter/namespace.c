@@ -29,25 +29,25 @@ Namespace *namespace_create(const char name[], Instruction * const ins,
     queue_init(&space->classes_q);
   }
 
-  /* Children */{
-    space->children = NEW_ARRAY(space->children, DEFAULT_CHILD_ARR_SZ,
-        Namespace *)
-    space->children_array_capacity = DEFAULT_CHILD_ARR_SZ;
-    space->children_len = 0;
-  }
+//  /* Children */{
+//    space->children = NEW_ARRAY(space->children, DEFAULT_CHILD_ARR_SZ,
+//        Namespace *)
+//    space->children_array_capacity = DEFAULT_CHILD_ARR_SZ;
+//    space->children_len = 0;
+//  }
 
   return space;
 }
 
-void namespace_add_child(Namespace * const space, Namespace * const child) {
-  if (space->children_len == space->children_array_capacity) {
-    space->children_array_capacity += DEFAULT_CHILD_ARR_SZ;
-    space->children = RENEW(space->children, space->children_array_capacity,
-        Namespace *)
-  }
-  space->children[space->children_len++] = child;
-  hashtable_insert(space->classes_ht, child->name, child);
-}
+//void namespace_add_child(Namespace * const space, Namespace * const child) {
+//  if (space->children_len == space->children_array_capacity) {
+//    space->children_array_capacity += DEFAULT_CHILD_ARR_SZ;
+//    space->children = RENEW(space->children, space->children_array_capacity,
+//        Namespace *)
+//  }
+//  space->children[space->children_len++] = child;
+//  hashtable_insert(space->classes_ht, child->name, child);
+//}
 
 void namespace_add_class(Namespace * const space, Class * const class) {
   if (space->classes_len == space->class_array_capacity) {
@@ -76,7 +76,7 @@ Object namespace_search(Namespace * const space, Queue * const exts) {
 }
 
 void namespace_free(Namespace * const space) {
-  free(space->children);
+  //free(space->children);
   hashtable_free(space->classes_ht, do_nothing);
   free(space->classes);
   queue_shallow_delete(&space->classes_q);

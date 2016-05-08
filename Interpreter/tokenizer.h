@@ -10,8 +10,8 @@
 
 #include <stdio.h>
 
-#include "queue.h"
 #include "shared.h"
+#include "queue.h"
 
 #define CODE_DELIM      " \t"
 #define CODE_COMMENT_CH ';'

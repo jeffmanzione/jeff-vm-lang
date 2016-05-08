@@ -64,6 +64,9 @@ void execute_tuple(const Instruction ins, InstructionMemory *ins_mem,
 void execute_fun_ptr(const Instruction ins, InstructionMemory *ins_mem,
     Context **context, Stack *stack);
 
+void ocall_fun(const char fun_name[], InstructionMemory *ins_mem,
+    Context **context, Stack *stack, Object comp_obj, int num_args);
+
 Object stack_pull(Stack *stack) {
   return deref(stack_pop(stack));
 }
@@ -366,7 +369,16 @@ void execute_unary(const Instruction ins, InstructionMemory *ins_mem,
       break;
 
     case (PRINT):
-      object_print(val, stdout);
+      if (COMPOSITE == val.type) {
+        if (composite_has_method(val.comp, "to_s", 0)) {
+          *((*context)->ip) = *((*context)->ip) - 1;
+          ocall_fun("to_s", ins_mem, context, stack, val, 0);
+        } else {
+          fprintf(stdout, "(Object)");
+        }
+      } else {
+        object_print(val, stdout);
+      }
       //printf("\n");
       fflush(stdout);
       break;
@@ -438,14 +450,19 @@ void execute_binary(const Instruction ins, InstructionMemory *ins_mem,
   Object first = stack_pull(stack);
   switch (ins.op) {
     case (ADD):
-      /*if (STRING == second.type || STRING == first.type) {
-       new.type = STRING;
-       new.str = object_string_merge(first, second);
-       free(first.str);
-       free(second.str);
-       } else { */
-      BIN(+, ins, new, first, second)
-      //}
+      if (ARRAY == first.type && ARRAY == second.type) {
+        new.type = ARRAY;
+        new.array = array_create();
+        int i;
+        for (i = 0; i < array_size(first.array); i++) {
+          array_enqueue(new.array, deref(array_get(first.array, i)));
+        }
+        for (i = 0; i < array_size(second.array); i++) {
+          array_enqueue(new.array, deref(array_get(second.array, i)));
+        }
+      } else {
+        BIN(+, ins, new, first, second)
+      }
       break;
     case (SUB):
       BIN(-, ins, new, first, second)
@@ -462,8 +479,14 @@ void execute_binary(const Instruction ins, InstructionMemory *ins_mem,
     case (XOR):
       BIN_BOOL(^, new, first, second)
     case (EQ):
-      //BIN_INT(==, new, first, second)
-      new = equals(first, second, program_state(ins_mem, context, stack));
+      if (COMPOSITE == first.type
+          && composite_has_method(first.comp, "eq", 1)) {
+        stack_push(stack, second);
+        ocall_fun("eq", ins_mem, context, stack, first, 1);
+        return;
+      } else {
+        new = equals(first, second, program_state(ins_mem, context, stack));
+      }
       break;
     case (IS):
       //BIN_INT(==, new, first, second)
@@ -658,12 +681,6 @@ void execute_array_ternary(const Instruction ins, InstructionMemory *ins_mem,
   }
 }
 
-void call_context_adr(Address address, InstructionMemory *ins_mem,
-    Context **context) {
-  call_context_adr_with_parent(address, ins_mem, context, *context);
-  (*context)->new_ip = TRUE;
-}
-
 void call_context_adr_with_parent(Address address, InstructionMemory *ins_mem,
     Context **context, Context *parent) {
   int adr;
@@ -672,6 +689,12 @@ void call_context_adr_with_parent(Address address, InstructionMemory *ins_mem,
   adr = address.index;
   CHECK(FAILURE == adr, "No known label.");
   *((*context)->ip) = adr;
+}
+
+void call_context_adr(Address address, InstructionMemory *ins_mem,
+    Context **context) {
+  call_context_adr_with_parent(address, ins_mem, context, *context);
+  (*context)->new_ip = TRUE;
 }
 
 void call_context(const Instruction ins, InstructionMemory *ins_mem,

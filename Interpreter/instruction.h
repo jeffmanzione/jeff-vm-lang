@@ -11,10 +11,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "hashtable.h"
-#include "shared.h"
 
 typedef struct _Instruction Instruction;
+typedef struct _InstructionMemory InstructionMemory;
+
+#include "hashtable.h"
+#include "queue.h"
+#include "shared.h"
+#include "object.h"
 
 #include "context.h"
 #include "stack.h"
@@ -161,7 +165,7 @@ typedef struct _Instruction {
   };
 } Instruction;
 
-typedef struct {
+typedef struct _InstructionMemory {
   Instruction *ins;
   int          index;
   size_t       num_ins;

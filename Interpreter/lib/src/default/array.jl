@@ -9,23 +9,25 @@ def flatten(arr) {
 	result
 }
 
-;def join(arr, seq) {
-;	result = []
-;    if |arr| > 0
-;        if arr[0] is Array
-;            for a : arr[0]
-;                result :<= a
-;        else result :<= arr[0]
-;
-;	for i=1, i < |arr|, i=i+1
-;        for c : seq
-;            result :<= c
-;        if arr[i] is Array
-;            for a : arr[i]
-;                result :<= a
-;        else result :<= arr[i]
-;	result
-;}
+def join(arr, seq) {
+	result = []
+    if (0 < |arr|) {
+        if arr[0] is Array
+            for a : arr[0]
+                result :<= a
+        else result :<= arr[0]
+
+        for i=1, i < |arr|, i=i+1 {
+            for c : seq
+                result :<= c
+            if arr[i] is Array
+                for a : arr[i]
+                    result :<= a
+            else result :<= arr[i]
+        }
+    }
+    result
+}
 
 def map(arr, f) {
     res = []
@@ -80,3 +82,20 @@ def min(array, cmp) {
             max_elt = array[i]
     max_elt
 }
+
+def contains(array, elt) {
+    for a : array
+        if a == elt
+            return True
+    False
+}
+
+; A bad impl of unique
+def unique(array) {
+    res = []
+    for i=0, i < |array|, i=i+1
+        if ~contains(res, array[i])
+            res :<= array[i]
+    res
+}
+

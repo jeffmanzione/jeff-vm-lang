@@ -1,3 +1,10 @@
+def arrcpy(a) {
+    cpy = []
+    for i=0, i<|a|, i=i+1
+        cpy :<= a[i]
+    cpy
+}
+
 def partition(a, lo, hi) {
 	{p, i} = (a[hi], lo)
 	for j=lo, j < hi, j=j+1
@@ -18,3 +25,9 @@ def quicksort(a, lo, hi)
 	}
 
 def qsort(a) quicksort(a, 0, |a|-1)
+
+def qsorted(a) {
+    sorted = arrcpy(a)
+    qsort(sorted)
+    sorted
+}

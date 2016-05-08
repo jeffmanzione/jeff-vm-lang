@@ -8,19 +8,20 @@
 #ifndef CLASS_H_
 #define CLASS_H_
 
+#include <stdint.h>
 #include <stdio.h>
+
+typedef struct _Composite Composite;
+typedef struct _Composite Class;
 
 #include "hashtable.h"
 #include "instruction.h"
-#include "shared.h"
+#include "object.h"
 
 #define DEFAULT_COMPOSITE_HT_SZ 128
 
 #define CLASS_CLASS_NAME  "Class"
 #define OBJECT_CLASS_NAME  "Object"
-
-typedef struct _Composite Composite;
-typedef struct _Composite Class;
 
 extern Class *class_class;
 extern Class *object_class;
@@ -34,8 +35,8 @@ typedef struct _Composite {
 } Composite;
 
 typedef struct {
-    uint16_t num_args;
-    uint64_t address; // Not known until right before execution.
+  uint16_t num_args;
+  uint64_t address; // Not known until right before execution.
 } MethodInfo;
 
 // Serialized forms
@@ -64,5 +65,7 @@ void composite_set(Composite *composite, const char field_name[], Object value);
 Object *composite_get(const Composite *composite, const char field_name[]);
 Object *composite_get_even_if_not_present(Composite *composite,
     const char field_name[]);
-int composite_has_field(const Composite *composite, const char field_name[]);
+bool composite_has_field(const Composite *composite, const char field_name[]);
+bool composite_has_method(const Composite *composite,
+    const char method_name[], int num_args);
 #endif /* CLASS_H_ */

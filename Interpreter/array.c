@@ -64,3 +64,7 @@ int array_size(const Array * const list) {
 int array_is_empty(const Array * const list) {
   return array_list_is_empty((ArrayList * const ) list);
 }
+
+bool array_is_string(const Array *const list) {
+  return array_list_is_string(list);
+}

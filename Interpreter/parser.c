@@ -1087,6 +1087,10 @@ void parse_exp_eq(Parser *parser, FILE *out) {
       parse_exp_eq(parser, out);
       write_ins_default(IS, out);
     }
+  } else if (nextTwoAreAndRemove(parser, EXCLAIM, EQUALS)) {
+    parse_exp_eq(parser, out);
+    write_ins_default(EQ, out);
+    write_ins_default(NOT, out);
   } else if (nextIsWordAndRemove(parser, ISNT_KEYWORD)) {
     parse_exp_eq(parser, out);
     write_ins_default(IS, out);
